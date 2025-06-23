@@ -13,7 +13,7 @@ import {
   EyeOutlined, PlusOutlined, DownloadOutlined, RocketOutlined, 
   CheckCircleOutlined, EditOutlined, LinkOutlined 
 } from '@ant-design/icons';
-import { CleanProjectLaunch } from '@/components/project/ProjectReviewLaunch';
+// import { CleanProjectLaunch } from '@/components/project/ProjectReviewLaunch'; // Component removed
 import { RedirectLinksConfig } from '@/components/project/RedirectLinksConfig';
 
 // Chart.js registration
@@ -627,48 +627,18 @@ export default function ViewProjectMock() {
             </div>
           </div>
         </div>
-        <CleanProjectLaunch
-          projectData={{
-            name: project.name,
-            description: project.description,
-            completes: project.count_complete || 100,
-            country: 'US',
-            language: 'en',
-            languages: ['en'],
-            loi_minutes: 15,
-            incidence_rate: 30,
-            survey_id: project.id,
-            demographics: {},
-            priority_level: 'standard'
-          }}
-          feasibilityData={feasibilityData}
-          quotaData={mockQuotasData.map(quota => ({
-            id: quota.id,
-            name: quota.name,
-            description: quota.description,
-            current: quota.complete,
-            target: quota.target,
-            percentage: (quota.complete / quota.target) * 100,
-            status: 'active' as "active",
-            cpi: quota.cpi,
-            complete: quota.complete,
-            failure: quota.failure,
-            message: quota.message
-          })) as QuotaProgress[]}
-          onLaunch={handleLaunch}
-          onEdit={() => {}}
-          onSaveDraft={() => {
-            notification.success({
-              message: 'Project Saved as Draft',
-              description: 'Your project has been saved as a draft.',
-              placement: 'topRight'
-            });
-            handleCloseLaunch();
-          }}
-          redirectLinks={redirectLinks}
-          setRedirectLinks={setRedirectLinks}
-          redirectLinksValid={redirectLinksValid}
-        />
+        {/* CleanProjectLaunch component removed - will be replaced with a simpler version */}
+        <div className="p-6">
+          <Alert
+            message="Project Launch Component"
+            description="The complex project launch wizard has been removed and will be replaced with a simpler version."
+            type="info"
+            showIcon
+          />
+          <div className="mt-4 flex justify-end">
+            <Button type="primary" onClick={handleCloseLaunch}>Close</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

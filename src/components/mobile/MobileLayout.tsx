@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Drawer, Button, Badge, Avatar } from 'antd';
 import { 
   MenuOutlined, BellOutlined, PlusOutlined, HomeOutlined,
-  ProjectOutlined, SettingOutlined, UserOutlined, CloseOutlined
+  SettingOutlined, UserOutlined, CloseOutlined
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { useFeatureFlagContext } from '@/components/shared/FeatureFlagProvider';
@@ -42,17 +42,10 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     },
     {
       key: 'create',
-      path: '/create',
+      path: '/wizard',
       icon: <PlusOutlined />, 
-      label: 'Create',
-      active: pathname === '/create'
-    },
-    {
-      key: 'projects',
-      path: '/projects',
-      icon: <ProjectOutlined />, 
-      label: 'Projects',
-      active: pathname.startsWith('/monitor')
+      label: 'Find Audience',
+      active: pathname === '/wizard'
     },
     {
       key: 'settings',
@@ -201,9 +194,9 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
                 block 
                 size="large"
                 icon={<PlusOutlined />}
-                onClick={() => handleNavigation('/create')}
+                onClick={() => handleNavigation('/wizard')}
               >
-                New Project
+                Find Audience
               </Button>
             </div>
           </div>

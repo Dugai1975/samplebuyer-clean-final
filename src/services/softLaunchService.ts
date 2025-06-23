@@ -59,7 +59,7 @@ export class SoftLaunchService {
         await new Promise(res => setTimeout(res, 300));
         // Mock: log notification
         console.info(`[SoftLaunch] Started for project ${projectId} with config`, config);
-        // Would call: await apiService.post(`/projects/${projectId}/soft_launch`, config);
+        // Would call: await apiService.post(`/api/projects/${projectId}/soft_launch`, config);
         return;
       } catch (error) {
         lastError = error;
@@ -114,7 +114,7 @@ export class SoftLaunchService {
         await new Promise(res => setTimeout(res, 150));
         // Mock notification
         console.info(`[SoftLaunch] Project ${projectId} paused for review.`);
-        // Would call: await apiService.post(`/projects/${projectId}/soft_pause`);
+        // Would call: await apiService.post(`/api/projects/${projectId}/soft_pause`);
         return;
       } catch (error) {
         lastError = error;
@@ -170,7 +170,7 @@ export class SoftLaunchService {
         await new Promise(res => setTimeout(res, 200));
         // Mock notification
         console.info(`[SoftLaunch] Project ${projectId} promoted to full launch.`);
-        // Would call: await apiService.post(`/projects/${projectId}/promote`);
+        // Would call: await apiService.post(`/api/projects/${projectId}/promote`);
         return;
       } catch (error) {
         lastError = error;

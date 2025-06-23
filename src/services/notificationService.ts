@@ -24,7 +24,8 @@ async function getProjectName(projectId: string): Promise<string> {
  * Utility to get review/action URL (mocked)
  */
 function getProjectUrl(projectId: string): string {
-  return `/projects/${projectId}/review`;
+  // Updated to use projectDetail route instead of deleted /projects/ route
+  return `/projectDetail?id=${projectId}`;
 }
 
 /**

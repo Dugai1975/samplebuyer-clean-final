@@ -32,16 +32,6 @@ export const ModernHeader: React.FC = () => {
       icon: <UserOutlined />,
       label: 'Profile Settings',
     },
-    {
-      key: 'suppliers',
-      icon: <SettingOutlined />,
-      label: 'Manage Suppliers',
-    },
-    {
-      key: 'billing',
-      icon: <SettingOutlined />,
-      label: 'Billing & Usage',
-    },
     { type: 'divider' as const },
     {
       key: 'help',
@@ -77,8 +67,8 @@ export const ModernHeader: React.FC = () => {
 
   const getRoleInfo = () => {
     const roleMap = {
-      client: { label: 'Client User', color: '#1890ff', description: 'Standard interface' },
-      internal: { label: 'Internal User', color: '#722ed1', description: 'Full system access' }
+      client: { label: 'User', color: '#1890ff', description: 'Standard interface' },
+      internal: { label: 'Admin', color: '#722ed1', description: 'Full system access' }
     };
     return roleMap[userContext.role || 'client'];
   };
@@ -182,9 +172,9 @@ export const ModernHeader: React.FC = () => {
               size={32} 
               style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', color: '#fff', fontWeight: 700, fontSize: 18 }}
             >
-              {(userContext.role ? userContext.role.charAt(0).toUpperCase() : 'E')}
+              {(userContext.role ? userContext.role.charAt(0).toUpperCase() : 'U')}
             </Avatar>
-            <span className="font-semibold text-white">Elena Gaiduk</span>
+            <span className="font-semibold text-gray-700">{roleInfo.label}</span>
           </div>
         </Dropdown>
       </div>
