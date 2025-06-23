@@ -1,0 +1,37 @@
+@media (max-width: 767px) {
+  .unified-project-creator {
+    padding-bottom: 120px;
+  }
+  .ant-form-item {
+    margin-bottom: 20px;
+  }
+  .ant-input,
+  .ant-select-selector {
+    height: 44px;
+    font-size: 16px;
+  }
+  .ant-collapse-header {
+    padding: 16px;
+    font-size: 16px;
+  }
+  .mobile-form-section {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .ant-form-item-explain-error {
+    font-size: 14px;
+    color: #ff4d4f;
+    margin-top: 4px;
+  }
+  .ant-form-item-has-success .ant-input {
+    border-color: #52c41a;
+    background: #f6ffed;
+  }
+  .mobile-progress-indicator {
+    font-size: 14px;
+    padding: 8px 0;
+    color: #1890ff;
+    font-weight: 500;
+    text-align: right;
+  }
+}

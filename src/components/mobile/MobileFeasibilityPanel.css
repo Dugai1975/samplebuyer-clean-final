@@ -1,0 +1,119 @@
+/* MobileFeasibilityPanel animations and styles */
+
+/* Base panel styling */
+.mobile-feasibility-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 1001; /* Above mobile nav but below modals */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  touch-action: pan-y;
+  overflow: hidden;
+}
+
+/* Panel states */
+.mobile-feasibility-panel.collapsed {
+  transform: translateY(0);
+  max-height: 180px;
+}
+
+.mobile-feasibility-panel.expanded {
+  transform: translateY(0);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Backdrop overlay */
+.mobile-feasibility-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.mobile-feasibility-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Handle */
+.mobile-feasibility-handle {
+  width: 40px;
+  height: 5px;
+  background-color: #e0e0e0;
+  border-radius: 3px;
+  margin: 8px auto;
+  cursor: grab;
+}
+
+.mobile-feasibility-handle:active {
+  cursor: grabbing;
+}
+
+/* Loading animations */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Price change animation */
+.price-update {
+  animation: bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Safe area insets for modern devices */
+.mobile-feasibility-panel {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-feasibility-panel,
+  .mobile-feasibility-backdrop,
+  .shimmer,
+  .price-update {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Touch feedback */
+.touch-feedback:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
