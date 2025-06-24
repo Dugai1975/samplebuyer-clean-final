@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { message } from 'antd';
 import { UnifiedProjectCreator } from '@/components/project/UnifiedProjectCreator';
-import { ProjectCreationData } from '@/types/enhanced';
+import { ProjectCreationData } from '@/types';
 import { apiService } from '@/services/api';
 
 export default function CreateProjectPage() {
@@ -39,7 +39,7 @@ export default function CreateProjectPage() {
     <div className="min-h-screen bg-gray-50">
       <UnifiedProjectCreator
         onCancel={handleCancel}
-        onComplete={handleComplete}
+        onComplete={(data) => { void handleComplete(data); }}
       />
     </div>
   );

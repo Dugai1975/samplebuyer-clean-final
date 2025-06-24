@@ -1,6 +1,7 @@
 // API service layer that works with existing and enhanced endpoints
-import type { Project, EnhancedProject, FeasibilityData, Quota, Buyer, SampleCriteria, LaunchConfig } from '@project-types';
-import type { ProjectCreationData, AIPromptAnalysis, LinkValidationResult, SmartSetupProgress } from '@/types/enhanced';
+import type { Project, EnhancedProject, FeasibilityData, Quota, Buyer, SampleCriteria, LaunchConfig, QuotaProgress, SupplierPerformance, ProjectActivity } from '@/types';
+import type { ProjectCreationData } from '@/types';
+import type { AIPromptAnalysis, LinkValidationResult, SmartSetupProgress } from '@/types/enhanced';
 
 class ApiService {
   private baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
@@ -34,13 +35,6 @@ class ApiService {
       ...data,
       buyer: {
         ...(data as any).buyer,
-        complete_link: data.redirect_links?.complete,
-        terminate_link: data.redirect_links?.terminate,
-        quota_link: data.redirect_links?.quota_full,
-        duplicate_link: data.redirect_links?.duplicate,
-        quality_link: data.redirect_links?.quality,
-        screenout_link: data.redirect_links?.screenout,
-        timeout_link: data.redirect_links?.timeout,
       }
     };
     // TODO: Call real API with payload when backend is ready
@@ -120,10 +114,10 @@ class ApiService {
         language: 'Portuguese',
         loi_minutes: 26,
         completion_percentage: 101,
-        health_status: 'excellent',
+        health_status: 'good',
         estimated_completion: 'Completed',
         budget_used: 722.00,
-        budget_total: 712.50,
+        
         last_activity: '5 minutes ago'
       },
       {
@@ -147,7 +141,7 @@ class ApiService {
         health_status: 'good',
         estimated_completion: '1 day',
         budget_used: 437.00,
-        budget_total: 456.00,
+        
         last_activity: '2 hours ago'
       }
     ];
@@ -163,7 +157,7 @@ class ApiService {
     const baseCpi = 2.5 + Math.random() * 3;
     
     return {
-      available_respondents: baseAvailable,
+      
       estimated_cpi: parseFloat(baseCpi.toFixed(2)),
       estimated_timeline_days: Math.ceil(criteria.completes / 50),
       confidence_level: 85 + Math.floor(Math.random() * 15),
