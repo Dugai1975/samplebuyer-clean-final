@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Row, Col, Card, Button, Typography, message, Form, Input, Select, Alert, Tooltip, InputNumber, Slider, Tag, Skeleton } from 'antd';
+import { Row, Col, Card, Button, Typography, message, Form, Input, Select, Alert, Tooltip, InputNumber, Slider, Tag, Skeleton, Modal } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined, RocketOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { FeasibilityData, QuotaProgress, ProjectCreationData } from '@/types';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -18,17 +18,69 @@ const { TextArea } = Input;
 
 interface UnifiedProjectCreatorProps {
   onCancel: () => void;
-  onComplete: (data: ProjectCreationData) => void;
+  onComplete: (data: any) => void;
+  showNavigation?: boolean;
+  onFeasibilityUpdate?: (data: FeasibilityData) => void;
 }
+
+// Local modal for project save/launch confirmation
+const ProjectSaveModal: React.FC<{
+  visible: boolean;
+  onCancel: () => void;
+  onConfirm: (name: string, description: string) => void;
+  defaultName: string;
+  defaultDescription: string;
+  summary: React.ReactNode;
+  loading?: boolean;
+  mode: 'draft' | 'launch';
+}> = ({ visible, onCancel, onConfirm, defaultName, defaultDescription, summary, loading, mode }) => {
+  const [name, setName] = useState(defaultName);
+  const [description, setDescription] = useState(defaultDescription);
+
+  React.useEffect(() => {
+    setName(defaultName);
+    setDescription(defaultDescription);
+  }, [defaultName, defaultDescription, visible]);
+
+  return (
+    <Modal
+      open={visible}
+      title={mode === 'launch' ? 'Finalize & Launch Project' : 'Save Project as Draft'}
+      onCancel={onCancel}
+      onOk={() => onConfirm(name, description)}
+      okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
+      confirmLoading={loading}
+      destroyOnClose
+    >
+      <div className="mb-4">{summary}</div>
+      <Form layout="vertical">
+        <Form.Item label="Project Name" required>
+          <Input value={name} onChange={e => setName(e.target.value)} maxLength={80} />
+        </Form.Item>
+        <Form.Item label="Project Description">
+          <Input.TextArea value={description} onChange={e => setDescription(e.target.value)} rows={3} maxLength={200} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
 
 export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   onCancel,
-  onComplete
+  onComplete,
+  showNavigation = true,
+  onFeasibilityUpdate
 }) => {
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [form] = Form.useForm();
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   const [showQuotas, setShowQuotas] = useState(false);
+  // Modal state for save/launch
+  const [saveModalVisible, setSaveModalVisible] = useState<false | 'draft' | 'launch'>(false);
+  const [pendingSave, setPendingSave] = useState<'draft' | 'launch' | null>(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalName, setModalName] = useState("");
+  const [modalDescription, setModalDescription] = useState("");
   const [projectData, setProjectData] = useState<Partial<ProjectCreationData> & Record<string, any>>({
     country: 'US',
     language: 'en',
@@ -47,59 +99,80 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   const [showReview, setShowReview] = useState(false);
   const [launching, setLaunching] = useState(false);
 
-  // Redirect links state
   const [redirectLinks, setRedirectLinks] = useState<Record<string, string>>({});
   const [redirectLinksValid, setRedirectLinksValid] = useState(false);
 
-  // Calculate margin of error for a given sample size (95% confidence level)
-  const calculateMarginOfError = (sampleSize: number): number => {
-    // Formula: z * sqrt(p * (1-p) / n), where z=1.96 for 95% confidence level, p=0.5 for maximum variance
-    return Math.round((1.96 * Math.sqrt(0.5 * 0.5 / sampleSize)) * 1000) / 10; // Round to 1 decimal place
-  };
+  // Helper for margin of error
+  function calculateMarginOfError(sampleSize: number): number {
+    return Math.round((1.96 * Math.sqrt(0.5 * 0.5 / sampleSize)) * 1000) / 10;
+  }
 
-  const handleDataChange = useCallback((updates: Partial<ProjectCreationData>) => {
-    setProjectData((prev) => {
-      // For demographics updates, do a deep comparison to prevent unnecessary updates
-      if (updates.demographics) {
-        const prevDemographics = JSON.stringify(prev.demographics);
-        const newDemographics = JSON.stringify(updates.demographics);
-        // If demographics haven't changed, don't trigger an update
-        if (prevDemographics === newDemographics) {
-          return prev;
-        }
-        // Just treat all demographic fields as string arrays
-        return { ...prev, ...updates, demographics: { ...updates.demographics } };
+  function generateSmartProjectName() {
+    const country = projectData.country || 'US';
+    const month = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    let generatedName = `${country} Study`;
+    if (projectData.demographics) {
+      const gender = projectData.demographics.gender;
+      const ageInfo = projectData.demographics.age_ranges;
+      if (gender && gender.length === 1) {
+        generatedName = `${country} ${gender[0] === 'M' ? 'Male' : 'Female'} Study`;
       }
-      // Only update if there are actual changes
-      return { ...prev, ...updates };
-    });
-    setIsCalculating(true);
-    setTimeout(() => setIsCalculating(false), 800);
-  }, []);
-
-  // Check for stored audience description and project name from the dashboard
-  useEffect(() => {
-    // Check if we have stored audience description and project name from the dashboard
-    const storedDescription = typeof window !== 'undefined' ? sessionStorage.getItem('audienceDescription') : null;
-    const storedProjectName = typeof window !== 'undefined' ? sessionStorage.getItem('projectName') : null;
-    
-    if (storedDescription && storedProjectName) {
-      // Update form and state with the stored values
-      form.setFieldsValue({
-        name: storedProjectName,
-        description: storedDescription
-      });
-      
-      handleDataChange({
-        name: storedProjectName,
-        description: storedDescription
-      });
-      
-      // Clear the session storage to prevent reusing the same values
-      sessionStorage.removeItem('audienceDescription');
-      sessionStorage.removeItem('projectName');
+      if (ageInfo && ageInfo.length > 0) {
+        generatedName += ` (${ageInfo[0]})`;
+      }
     }
-  }, [form, handleDataChange]);
+    return `${generatedName} - ${month}`;
+  }
+
+  function generateSmartDescription() {
+    const { country, demographics, completes, loi_minutes, incidence_rate } = projectData;
+    let desc = `A survey targeting `;
+    if (demographics?.gender?.length === 1) desc += demographics.gender[0] === 'M' ? 'men' : 'women';
+    else desc += 'adults';
+    if (demographics?.age_ranges?.length) desc += ` aged ${demographics.age_ranges.join(', ')}`;
+    desc += ` in ${country || 'the US'}`;
+    if (completes) desc += ` (n=${completes})`;
+    if (loi_minutes) desc += `, ${loi_minutes} min`;
+    if (incidence_rate) desc += `, IR ${incidence_rate}%`;
+    desc += '.';
+    return desc;
+  }
+
+  function handleSaveDraft() {
+    setModalName(generateSmartProjectName());
+    setModalDescription(generateSmartDescription());
+    setSaveModalVisible('draft');
+    setPendingSave('draft');
+  }
+
+  function handleLaunch() {
+    setModalName(generateSmartProjectName());
+    setModalDescription(generateSmartDescription());
+    setSaveModalVisible('launch');
+    setPendingSave('launch');
+  }
+
+  async function handleModalConfirm(name: string, description: string) {
+    setModalLoading(true);
+    const saveData = { ...projectData, name, description };
+    if (pendingSave === 'draft') {
+      const drafts = JSON.parse(localStorage.getItem('projectDrafts') || '[]');
+      const newDraft = { ...saveData, status: 'draft', uuid: Date.now().toString() };
+      localStorage.setItem('projectDrafts', JSON.stringify([newDraft, ...drafts]));
+      message.success('Draft saved!');
+      setModalLoading(false);
+      setSaveModalVisible(false);
+      onCancel();
+    } else if (pendingSave === 'launch') {
+      const launched = JSON.parse(localStorage.getItem('projects') || '[]');
+      const newProject = { ...saveData, status: 'active', uuid: Date.now().toString() };
+      localStorage.setItem('projects', JSON.stringify([newProject, ...launched]));
+      message.success('Project launched!');
+      setModalLoading(false);
+      setSaveModalVisible(false);
+      onComplete(newProject);
+    }
+  }
 
   const calculateFeasibility = useCallback(async () => {
     // Only calculate if all required fields are present
@@ -143,8 +216,6 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
       setIsCalculating(false);
     }
   }, [projectData]);
-
-  // Removed manual trigger functionality as it's not needed
 
   // Helper function to check if project has minimum details
   const checkHasMinimumProjectDetails = () => {
@@ -199,31 +270,10 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
             name: autoName,
             description: autoDescription
           });
-          
-          handleDataChange({ name: autoName, description: autoDescription });
         }
       }, 500);
-      
-      return () => clearTimeout(timer);
     }
-  }, [projectData.completes, projectData.incidence_rate, projectData.loi_minutes, projectData.demographics, calculateFeasibility, form, projectData.country, projectData.name]);
-
-  const handleSaveDraft = () => {
-    // Show project details section if not already shown
-    if (!showProjectDetails) {
-      setShowProjectDetails(true);
-    }
-    message.success('Project draft saved successfully');
-  };
-
-  const handleLaunch = (e?: React.MouseEvent<HTMLElement>) => {
-    if (e) e.preventDefault();
-    // Show project details section if not already shown
-    if (!showProjectDetails) {
-      setShowProjectDetails(true);
-    }
-    setShowReview(true);
-  };
+  }, [projectData]);
 
   const handleReviewLaunch = (launchType: 'soft' | 'full', launchConfig: any) => {
     setLaunching(true);
@@ -279,7 +329,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
               form={form}
               layout="vertical"
               initialValues={projectData}
-              onValuesChange={(_, allValues) => handleDataChange(allValues)}
+              onValuesChange={(changedValues, allValues) => setProjectData(allValues)}
             >
               {/* Organize form fields in a more spacious layout for desktop */}
               <Row gutter={[24, 16]} className="mb-6">
@@ -337,7 +387,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                       max={10000}
                       step={50}
                       size="large"
-                      onChange={(value) => handleDataChange({ completes: value as number })}
+                      onChange={(value) => setProjectData(prev => ({ ...prev, completes: value as number }))}
                       onFocus={(e) => e.target.select()}
                     />
                   </Form.Item>
@@ -350,21 +400,21 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                     <div className="mt-2 space-y-2">
                       <div className="cursor-pointer" onClick={() => {
                         form.setFieldsValue({ completes: 100 });
-                        handleDataChange({ completes: 100 });
+                        setProjectData(prev => ({ ...prev, completes: 100 }));
                       }}>
                         <Tag color="orange">Directional</Tag>
                         <span className="ml-1 hover:text-blue-600">n=100 (±{calculateMarginOfError(100)}%) - Quick insights and general trends</span>
                       </div>
                       <div className="cursor-pointer" onClick={() => {
                         form.setFieldsValue({ completes: 400 });
-                        handleDataChange({ completes: 400 });
+                        setProjectData(prev => ({ ...prev, completes: 400 }));
                       }}>
                         <Tag color="blue">Base</Tag>
                         <span className="ml-1 hover:text-blue-600">n=400 (±{calculateMarginOfError(400)}%) - Analyze 2-3 subgroups</span>
                       </div>
                       <div className="cursor-pointer" onClick={() => {
                         form.setFieldsValue({ completes: 1000 });
-                        handleDataChange({ completes: 1000 });
+                        setProjectData(prev => ({ ...prev, completes: 1000 }));
                       }}>
                         <Tag color="green">Advanced</Tag>
                         <span className="ml-1 hover:text-blue-600">n=1000 (±{calculateMarginOfError(1000)}%) - Multiple segments analysis</span>
@@ -396,7 +446,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                           tooltip={{ formatter: (value) => `${value}%` }}
                           onChange={(value) => {
                             form.setFieldsValue({ incidence_rate: value });
-                            handleDataChange({ incidence_rate: value as number });
+                            setProjectData(prev => ({ ...prev, incidence_rate: value as number }));
                           }}
                         />
                       </div>
@@ -408,7 +458,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                           value={projectData.incidence_rate}
                           addonAfter="%"
                           size="large"
-                          onChange={(value) => handleDataChange({ incidence_rate: value as number })}
+                          onChange={(value) => setProjectData(prev => ({ ...prev, incidence_rate: value as number }))}
                           onFocus={(e) => e.target.select()}
                         />
                       </div>
@@ -448,7 +498,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                           tooltip={{ formatter: (value) => `${value} minutes` }}
                           onChange={(value) => {
                             form.setFieldsValue({ loi_minutes: value });
-                            handleDataChange({ loi_minutes: value as number });
+                            setProjectData(prev => ({ ...prev, loi_minutes: value as number }));
                           }}
                         />
                       </div>
@@ -460,7 +510,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                           value={projectData.loi_minutes}
                           addonAfter="min"
                           size="large"
-                          onChange={(value) => handleDataChange({ loi_minutes: value as number })}
+                          onChange={(value) => setProjectData(prev => ({ ...prev, loi_minutes: value as number }))}
                           onFocus={(e) => e.target.select()}
                         />
                       </div>
@@ -480,47 +530,12 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
           </Card>
           
           {/* Project Details - Only shown when needed */}
-          {showProjectDetails && (
-            <Card title="Name your project" className="mb-6">
-              <Form
-                form={form}
-                layout="vertical"
-                initialValues={projectData}
-                onValuesChange={(_, allValues) => handleDataChange(allValues)}
-              >
-                <Row gutter={16}>
-                  <Col span={24}>
-                    <Form.Item
-                      name="name"
-                      label="Project Name"
-                      rules={[{ required: true, message: 'Please enter a project name' }]}
-                    >
-                      <Input placeholder="Enter project name" />
-                    </Form.Item>
-                  </Col>
-                  
-                  <Col span={24}>
-                    <Form.Item
-                      name="description"
-                      label="Project Description"
-                      rules={[{ required: true, message: 'Please enter a project description' }]}
-                    >
-                      <TextArea 
-                        placeholder="Describe your project and target audience" 
-                        rows={4}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Form>
-            </Card>
-          )}
           
           {/* Demographics Builder */}
           <Card title="Step 2: Select your target audience" className="mb-6">
             <DemographicsBuilder
               initialDemographics={projectData.demographics || {}}
-              onUpdate={(demographics) => handleDataChange({ demographics })}
+              onUpdate={(demographics) => setProjectData(prev => ({ ...prev, demographics }))}
             />
           </Card>
           
@@ -543,7 +558,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                 quotas={quotaData}
                 onQuotaChange={(quotas) => {
                   setQuotaData(quotas);
-                  handleDataChange({ quotas });
+                  setProjectData(prev => ({ ...prev, quotas }));
                 }}
               />
             ) : (
@@ -800,6 +815,27 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Project Save/Launch Modal */}
+                <ProjectSaveModal
+                  visible={!!saveModalVisible}
+                  onCancel={() => setSaveModalVisible(false)}
+                  onConfirm={handleModalConfirm}
+                  defaultName={modalName}
+                  defaultDescription={modalDescription}
+                  summary={
+                    <div>
+                      <div><b>Estimated Cost:</b> ${feasibilityData?.estimated_cost?.toFixed(2) ?? '-'}</div>
+                      <div><b>Estimated Time:</b> {feasibilityData?.estimated_time ?? '-'} days</div>
+                      <div><b>Country:</b> {projectData.country}</div>
+                      <div><b>Completes:</b> {projectData.completes}</div>
+                      <div><b>LOI:</b> {projectData.loi_minutes} min</div>
+                      <div><b>Incidence Rate:</b> {projectData.incidence_rate}%</div>
+                    </div>
+                  }
+                  loading={modalLoading}
+                  mode={saveModalVisible === 'launch' ? 'launch' : 'draft'}
+                />
               </div>
             </div>
           </Col>

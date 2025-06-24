@@ -33,28 +33,10 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   }, []);
 
   const navigationItems = [
-    {
-      key: 'dashboard',
-      path: '/',
-      icon: <HomeOutlined />, 
-      label: 'Dashboard',
-      active: pathname === '/'
-    },
-    {
-      key: 'create',
-      path: '/wizard',
-      icon: <PlusOutlined />, 
-      label: 'Find Audience',
-      active: pathname === '/wizard'
-    },
-    {
-      key: 'settings',
-      path: '/settings',
-      icon: <SettingOutlined />, 
-      label: 'Settings',
-      active: pathname === '/settings'
-    }
-  ];
+  { key: 'dashboard', path: '/', icon: <HomeOutlined />, label: 'Dashboard', active: pathname === '/' },
+  { key: 'wizard', path: '/wizard', icon: <PlusOutlined />, label: 'Find Audience', active: pathname === '/wizard' },
+  { key: 'settings', path: '/settings', icon: <SettingOutlined />, label: 'Settings', active: pathname === '/settings' }
+];
 
   const handleNavigation = (path: string) => {
     router.push(path);

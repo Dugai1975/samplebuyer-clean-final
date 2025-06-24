@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation';
 const { Header } = Layout;
 const { Title } = Typography;
 
-
 export const ModernHeader: React.FC = () => {
   const router = useRouter();
   const { userContext, updateUserContext } = useFeatureFlagContext();
@@ -43,7 +42,7 @@ export const ModernHeader: React.FC = () => {
       icon: <LogoutOutlined />,
       label: 'Sign Out',
     },
-  ];
+  ]; 
 
   const notificationMenuItems = [
     ...notifications.map(notif => ({
@@ -67,13 +66,17 @@ export const ModernHeader: React.FC = () => {
 
   const getRoleInfo = () => {
     const roleMap = {
-      client: { label: 'User', color: '#1890ff', description: 'Standard interface' },
+      client: { label: 'Find Audience', color: '#1890ff', description: 'Standard interface' },
       internal: { label: 'Admin', color: '#722ed1', description: 'Full system access' }
     };
     return roleMap[userContext.role || 'client'];
   };
 
   const roleInfo = getRoleInfo();
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
 
   return (
     <Header
@@ -144,7 +147,7 @@ export const ModernHeader: React.FC = () => {
             size="middle"
             className="rounded-full bg-white/30 border-0 text-gray-400 hover:bg-white/40 hover:text-gray-600 transition-all duration-150"
             style={{ boxShadow: '0 1px 6px 0 rgba(120,80,200,0.04)' }}
-            onClick={() => setSearchExpanded(true)}
+            onClick={() => handleNavigation('/wizard')}
           />
         )} 
       </div>

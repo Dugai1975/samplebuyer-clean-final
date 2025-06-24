@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Row, Col, Input, Select, Button, Space, Empty } from 'antd';
 import { SearchOutlined, FilterOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import { ProjectCard } from './ProjectCard';
-import { EnhancedProject } from '@/types/enhanced';
+import { Project } from '@/types/enhanced';
 
 const { Option } = Select;
 
 interface ProjectGridProps {
-  projects: EnhancedProject[];
+  projects: Project[];
   loading?: boolean;
-  onProjectView: (project: EnhancedProject) => void;
-  onProjectEdit?: (project: EnhancedProject) => void;
+  onProjectView: (project: Project) => void;
+  onProjectEdit?: (project: Project) => void;
 }
 
 export const ProjectGrid: React.FC<ProjectGridProps> = ({
@@ -21,6 +22,7 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
   onProjectView,
   onProjectEdit
 }) => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
@@ -115,7 +117,7 @@ export const ProjectGrid: React.FC<ProjectGridProps> = ({
             <Col xs={24} sm={12} lg={8} xl={6} key={project.uuid}>
               <ProjectCard
                 project={project}
-                onView={onProjectView}
+                onView={project => router.push(`/projectDetail?id=${project.uuid}`)}
                 onEdit={onProjectEdit}
                 onPause={(proj) => console.log('Pause project:', proj.uuid)}
                 onResume={(proj) => console.log('Resume project:', proj.uuid)}

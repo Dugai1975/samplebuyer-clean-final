@@ -4,7 +4,7 @@ export * from '../../../shared/types/enhanced';
 
 // Project creation specific types
 export interface ProjectCreationData {
-  name: string;
+  name?: string;
   description?: string;
   country: string;
   language: string;

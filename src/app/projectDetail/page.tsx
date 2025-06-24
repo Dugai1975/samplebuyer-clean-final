@@ -13,6 +13,8 @@ import {
   EyeOutlined, PlusOutlined, DownloadOutlined, RocketOutlined, 
   CheckCircleOutlined, EditOutlined, LinkOutlined 
 } from '@ant-design/icons';
+// import { ProjectReviewLaunch } from '@/components/project/ProjectReviewLaunch'; // Deleted component, import commented out
+// import SoftLaunchBreadcrumbs from '@/components/navigation/SoftLaunchBreadcrumbs'; // Deleted component, import commented out
 // import { CleanProjectLaunch } from '@/components/project/ProjectReviewLaunch'; // Component removed
 import { RedirectLinksConfig } from '@/components/project/RedirectLinksConfig';
 
@@ -188,7 +190,7 @@ export default function ViewProjectMock() {
   const { token } = theme.useToken();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const projectId = searchParams.get('id');
+  const projectId = searchParams?.get('id') ?? '';
   
   // Log the project ID to help with debugging
   useEffect(() => {
@@ -439,7 +441,7 @@ export default function ViewProjectMock() {
           <Text type="secondary">{project.description}</Text>
         </div>
         <div className="flex space-x-2">
-          <Button icon={<ArrowLeftOutlined />} onClick={() => router.push('/')}>Back to Projects</Button>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => router.push('/')}>Back to Dashboard</Button>
         </div>
       </div>
       <Card style={{ background: token.colorBgContainer }} className="mb-4">
@@ -627,7 +629,11 @@ export default function ViewProjectMock() {
             </div>
           </div>
         </div>
-        {/* CleanProjectLaunch component removed - will be replaced with a simpler version */}
+        {/* CleanProjectLaunch and SoftLaunchBreadcrumbs components removed - will be replaced with simpler versions if needed */}
+        {/* 
+          <CleanProjectLaunch />
+          <SoftLaunchBreadcrumbs />
+        */}
         <div className="p-6">
           <Alert
             message="Project Launch Component"

@@ -7,6 +7,14 @@ export type { BaseProject, Project, FeasibilityData, Quota, Buyer, SampleCriteri
 // Types below are unique to enhanced.ts and not part of the unified project types.
 // (All project-related types are now re-exported from '@project-types')
 
+export interface ProjectPreview {
+  name: string;
+  description: string;
+  estimatedCost: number;
+  timeline: string;
+  cpi: number;
+}
+
 export interface AIPromptAnalysis {
   projectName: string;
   country: string;
@@ -54,13 +62,14 @@ export interface ProjectCreationData {
     screenout?: string;
     timeout?: string;
   };
-  launch_type?: 'soft' | 'full';
-  soft_launch_config?: {
-    testLimit: number;
-    testLimitType: 'fixed' | 'percentage';
-    autoPause: boolean;
-    redirectLinks?: Record<string, string>;
-  };
+  // launch_type?: 'soft' | 'full'; // Soft launch type reference commented out (deprecated)
+  // soft_launch_config?: {
+  //   testLimit: number;
+  //   testLimitType: 'fixed' | 'percentage';
+  //   autoPause: boolean;
+  //   redirectLinks?: Record<string, string>;
+  // };
+  // [Soft launch config fields commented out as part of complex soft launch state cleanup]
 
   // Basic info
   name: string;
