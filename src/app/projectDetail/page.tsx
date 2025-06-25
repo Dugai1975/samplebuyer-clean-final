@@ -6,7 +6,7 @@ import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from 'c
 import { Doughnut } from 'react-chartjs-2';
 import { 
   Button, Card, Tabs, Typography, Modal, Tag, Progress, notification, Input, 
-  Form, Select, Collapse, Switch, Checkbox, Alert, Space, Table, theme
+  Form, Select, Collapse, Switch, Checkbox, Alert, Space, Table, theme, Row, Col
 } from 'antd';
 import { 
   CopyOutlined, ArrowLeftOutlined, PauseCircleOutlined, BarChartOutlined, 
@@ -187,6 +187,75 @@ interface QuotaProgress {
 }
 
 export default function ViewProjectMock() {
+  // Layout mode state: 'tabbed' (default) or 'split'
+  const [layoutMode, setLayoutMode] = useState<'tabbed' | 'split'>('tabbed');
+
+  // Helper for split-view: render audience sources list
+  const renderAudienceSourcesList = () => (
+    <div className="space-y-4">
+      <div className="border border-gray-200 rounded-lg p-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <h4 className="font-semibold">RIWI Primary Audience</h4>
+            <p className="text-gray-600 text-sm">US, 25-54, Both genders</p>
+            <div className="flex space-x-4 mt-2">
+              <span className="text-sm">Status: <Tag color="green">Active</Tag></span>
+              <span className="text-sm">Fielded: {project.count_complete}</span>
+              <span className="text-sm">CPI: ${project.cpi_buyer ? (project.cpi_buyer / 100).toFixed(2) : '0.00'}</span>
+            </div>
+          </div>
+          <Button size="small">Configure</Button>
+        </div>
+      </div>
+      <Button type="dashed" block icon={<PlusOutlined />}>Add New Audience Source</Button>
+    </div>
+  );
+
+  // Helper for split-view: render audience metrics
+  const renderAudienceMetrics = () => (
+    <div className="space-y-3">
+      <div>
+        <span className="text-sm text-gray-600">Conversion Rate</span>
+        <div className="font-semibold">12.5%</div>
+      </div>
+      <div>
+        <span className="text-sm text-gray-600">Quality Score</span>
+        <div className="font-semibold">94/100</div>
+      </div>
+    </div>
+  );
+
+  // Split-view dashboard layout
+  const renderSplitDashboard = () => (
+    <Row gutter={24} className="min-h-screen">
+      {/* Left Panel: Audience Management */}
+      <Col span={10}>
+        <div className="sticky top-4">
+          <Card title="Audience Sources" className="mb-4">
+            {renderAudienceSourcesList()}
+          </Card>
+          <Card title="Audience Performance" size="small">
+            {renderAudienceMetrics()}
+          </Card>
+        </div>
+      </Col>
+      {/* Right Panel: Project Settings & Monitoring */}
+      <Col span={14}>
+        <Card title="Project Control Center">
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={[
+              { key: 'overview', label: 'Overview', children: renderOverview() },
+              { key: 'settings', label: 'Settings', children: <div>Settings tab (to implement)</div> },
+              { key: 'monitoring', label: 'Live Data', children: <div>Live Data tab (to implement)</div> }
+            ]}
+          />
+        </Card>
+      </Col>
+    </Row>
+  );
+
   const { token } = theme.useToken();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -308,297 +377,314 @@ export default function ViewProjectMock() {
     // Add any other required fields from the canonical interface
   };
 
-  const renderOverview = () => (
-    <div className="mt-4">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">Project Overview</h2>
-          <p className="text-gray-500">Current progress and statistics</p>
-        </div>
-        <div className="flex space-x-2">
-          {project.state === 'draft' && (
-            <Button 
-              type="primary" 
-              size="large"
-              icon={<RocketOutlined />} 
-              onClick={handleOpenLaunch}
-              className="bg-green-500 hover:bg-green-600"
-            >
-              Launch Project
-            </Button>
-          )}
-          {project.state === 'soft_launch' && (
-            <Button 
-              type="primary" 
-              size="large"
-              icon={<RocketOutlined />} 
-              onClick={handleOpenLaunch}
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              Full Launch
-            </Button>
-          )}
-          {(project.state === 'active' || project.state === 'paused') && (
-            <Button 
-              icon={<PauseCircleOutlined />} 
-              size="large"
-              onClick={() => notification.info({message: 'Pause functionality would be implemented here'})}
-            >
-              {project.state === 'paused' ? 'Resume' : 'Pause'}
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="shadow-sm bg-blue-50">
-          <p className="text-sm text-gray-500">Sample Available</p>
-          <p className="text-2xl font-bold">{project.total_available}</p>
-        </Card>
-        <Card className="shadow-sm bg-green-50">
-          <p className="text-sm text-gray-500">Completes</p>
-          <p className="text-2xl font-bold">{project.count_complete}</p>
-        </Card>
-        <Card className="shadow-sm bg-orange-50">
-          <p className="text-sm text-gray-500">Terminates</p>
-          <p className="text-2xl font-bold">{project.count_terminate}</p>
-        </Card>
-        <Card className="shadow-sm bg-purple-50">
-          <p className="text-sm text-gray-500">CPI</p>
-          <p className="text-2xl font-bold">${(project.cpi_buyer / 100).toFixed(2)}</p>
-        </Card>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-sm" title="Completion Progress">
-          <div className="flex justify-center items-center py-4">
-            <div style={{ width: '200px', height: '200px' }}>
-              <Doughnut 
-                data={chartData} 
-                options={{
-                  cutout: '70%',
-                  plugins: {
-                    legend: {
-                      position: 'bottom'
-                    }
-                  }
-                }} 
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Target</p>
-              <p className="text-xl font-bold">{project.count_complete + (project.total_available - project.count_complete - project.count_terminate)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm text-gray-500">Completion Rate</p>
-              <p className="text-xl font-bold">
-                {Math.round((project.count_complete / (project.count_complete + (project.total_available - project.count_complete - project.count_terminate))) * 100)}%
-              </p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="shadow-sm" title="Survey Links">
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Survey URL</p>
-              <div className="flex items-center">
-                <Input value={project.buyer.redirect_url} readOnly />
-                <Button icon={<CopyOutlined />} className="ml-2" />
-              </div>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Complete Link</p>
-              <div className="flex items-center">
-                <Input value={project.buyer.complete_link} readOnly />
-                <Button icon={<CopyOutlined />} className="ml-2" />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button 
-                type="default" 
-                icon={<EditOutlined />}
-                onClick={handleOpenLaunch}
-              >
-                Edit Links
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="p-4 bg-gray-50">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <Title level={4} style={{margin: 0}}>
-            {project.name} {getStatusBadge()}
-          </Title>
-          <Text type="secondary">{project.description}</Text>
-        </div>
-        <div className="flex space-x-2">
-          <Button icon={<ArrowLeftOutlined />} onClick={() => router.push('/')}>Back to Dashboard</Button>
-        </div>
-      </div>
-      <Card style={{ background: token.colorBgContainer }} className="mb-4">
-        <div className='px-4'>
-          <div className='text-right'>
-            <Button onClick={handleOverviewRep}>Overview</Button>
-          </div>
-          <div className='grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 lg:grid-cols-2'>
-            <div>
-              <div className="px-6 py-4 grid grid-cols-1 w-64 gap-2">
-                {suppliers.map(s => <Button key={s.uuid} className={`w-full ${selectedSupplierId===s.uuid?'bg-blue-500 text-white':''}`} onClick={()=>handleSupplierClick(s.uuid)}>{s.name}</Button>)}
-              </div>
-            </div>
-            <div>
-              <div className="flex flex-col p-4 items-center">
-                <div className="relative w-40 h-40">
-                  <Doughnut data={chartData} options={chartOptions} />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-xl font-bold text-green-400">{((project.count_complete+project.count_accept)/project.total_available*100).toFixed(2)} %</p>
-                    <p className="text-gray-500 text-sm">Completed</p>
-                  </div>
+  const renderAudienceTab = () => (
+  <Row gutter={[24, 24]}>
+    <Col span={16}>
+      <Card title="Active Audience Sources" className="mb-6">
+        {/* List of configured audiences */}
+        <div className="space-y-4">
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-semibold">RIWI Primary Audience</h4>
+                <p className="text-gray-600 text-sm">US, 25-54, Both genders</p>
+                <div className="flex space-x-4 mt-2">
+                  <span className="text-sm">Status: <Tag color="green">Active</Tag></span>
+                  <span className="text-sm">Fielded: {project.count_complete}</span>
+                  <span className="text-sm">CPI: ${project.cpi_buyer ? (project.cpi_buyer / 100).toFixed(2) : '0.00'}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 rounded-lg shadow-md text-center"><p className="text-gray-500 text-sm">Sample available</p><p className="text-2xl font-bold">{project.total_available}</p></div>
-                <div className="p-4 rounded-lg shadow-md text-center"><p className="text-gray-500 text-sm">CPI</p><p className="text-2xl font-bold">${(project.cpi_buyer/100).toFixed(2)}</p></div>
-                <div className="p-4 rounded-lg shadow-md text-center"><p className="text-gray-500 text-sm">Completed</p><p className="text-2xl font-bold">{project.count_complete+project.count_accept}</p></div>
-                <div className="p-4 rounded-lg shadow-md text-center"><p className="text-gray-500 text-sm">Over Quotas</p><p className="text-2xl font-bold">{project.count_over_quota}</p></div>
-                <div className="p-4 rounded-lg shadow-md text-center"><p className="text-gray-500 text-sm">Terminated</p><p className="text-2xl font-bold">{project.count_terminate+project.count_reject}</p></div>
-                <div className="p-4 rounded-lg shadow-md text-center"><p className="text-gray-500 text-sm">Status</p><Tag color={project.state==='active'?'green':'orange'} className="text-lg font-semibold">{project.state.charAt(0).toUpperCase()+project.state.slice(1)}</Tag></div>
-              </div>
+              <Button size="small">Configure</Button>
             </div>
+          </div>
+        </div>
+        <Button type="dashed" block className="mt-4" icon={<PlusOutlined />}>
+          Add New Audience Source
+        </Button>
+      </Card>
+    </Col>
+    <Col span={8}>
+      <Card title="Audience Performance" size="small">
+        {/* Audience-specific metrics */}
+        <div className="space-y-3">
+          <div>
+            <span className="text-sm text-gray-600">Conversion Rate</span>
+            <div className="font-semibold">12.5%</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-600">Quality Score</span>
+            <div className="font-semibold">94/100</div>
           </div>
         </div>
       </Card>
-      <Tabs
-        defaultActiveKey="1"
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: '1',
-            label: 'Project Info',
-            children: renderOverview()
-          },
-          {
-            key: '4',
-            label: 'Buyer',
-            children: (
-              <Card className="shadow-md mb-4">
-                {sampleUrls.map((u: {code: string, redirect_url: string}, i: number) => (
-                  <div key={i} className="mb-2">
-                    <label className="block text-sm">Code: {u.code}</label>
-                    <Input 
-                      readOnly 
-                      value={u.redirect_url} 
-                      addonAfter={
-                        <Button 
-                          icon={<CopyOutlined />} 
-                          onClick={() => navigator.clipboard.writeText(u.redirect_url)}
-                        >
-                          Copy
-                        </Button>
-                      } 
-                    />
-                  </div>
-                ))}
-              </Card>
-            )
-          },
-          {
-            key: '7',
-            label: 'Suppliers',
-            children: (
-              <>
-                <div className="text-right mb-2">
-                  <Button icon={<PlusOutlined />} size="small">Add sample provider</Button>
+    </Col>
+  </Row>
+);
+
+const renderOverview = () => {
+  return (
+    <div className="mt-4">
+      <div className="flex flex-col space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold">Project Overview</h2>
+          <p className="text-gray-500">Current progress and statistics</p>
+          <div className="flex space-x-2 mt-2">
+            {project.state === 'draft' && (
+              <Button 
+                type="primary" 
+                size="large"
+                icon={<RocketOutlined />} 
+                onClick={handleOpenLaunch}
+                className="bg-green-500 hover:bg-green-600"
+              >
+                Launch Project
+              </Button>
+            )}
+            {project.state === 'soft_launch' && (
+              <Button 
+                type="primary" 
+                size="large"
+                icon={<RocketOutlined />} 
+                onClick={handleOpenLaunch}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                Full Launch
+              </Button>
+            )}
+            {(project.state === 'active' || project.state === 'paused') && (
+              <Button 
+                icon={<PauseCircleOutlined />} 
+                size="large"
+                onClick={() => notification.info({message: 'Pause functionality would be implemented here'})}
+              >
+                {project.state === 'paused' ? 'Resume' : 'Pause'}
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="shadow-sm bg-blue-50">
+            <p className="text-sm text-gray-500">Sample Available</p>
+            <p className="text-2xl font-bold">{project.total_available}</p>
+          </Card>
+          <Card className="shadow-sm bg-green-50">
+            <p className="text-sm text-gray-500">Completes</p>
+            <p className="text-2xl font-bold">{project.count_complete}</p>
+          </Card>
+          <Card className="shadow-sm bg-orange-50">
+            <p className="text-sm text-gray-500">Terminates</p>
+            <p className="text-2xl font-bold">{project.count_terminate}</p>
+          </Card>
+          <Card className="shadow-sm bg-purple-50">
+            <p className="text-sm text-gray-500">CPI</p>
+            <p className="text-2xl font-bold">${(project.cpi_buyer / 100).toFixed(2)}</p>
+          </Card>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="shadow-sm" title="Completion Progress">
+            <div className="flex justify-center items-center py-4">
+              <div style={{ width: '200px', height: '200px' }}>
+                <Doughnut 
+                  data={chartData} 
+                  options={{
+                    cutout: '70%',
+                    plugins: {
+                      legend: {
+                        position: 'bottom'
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-500">Target</p>
+                <p className="text-xl font-bold">{project.count_complete + (project.total_available - project.count_complete - project.count_terminate)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-500">Completion Rate</p>
+                <p className="text-xl font-bold">
+                  {Math.round((project.count_complete / (project.count_complete + (project.total_available - project.count_complete - project.count_terminate))) * 100)}%
+                </p>
+              </div>
+            </div>
+          </Card>
+          <Card className="shadow-sm" title="Survey Links">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Survey URL</p>
+                <div className="flex items-center">
+                  <Input value={project.buyer.redirect_url} readOnly />
+                  <Button icon={<CopyOutlined />} className="ml-2" />
                 </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500 mb-1">Complete Link</p>
+                <div className="flex items-center">
+                  <Input value={project.buyer.complete_link} readOnly />
+                  <Button icon={<CopyOutlined />} className="ml-2" />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button 
+                  type="default" 
+                  icon={<EditOutlined />}
+                  onClick={handleOpenLaunch}
+                >Edit</Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Tabs children below: fix misplaced/stray code and props ---
+
+  // Main component return
+  return (
+    <div>
+      {/* Conditionally render split or tabbed dashboard */}
+      {layoutMode === 'split' ? renderSplitDashboard() : (
+        <div>
+          <Card style={{ background: token.colorBgContainer }} className="mb-4">
+            <div className='px-4'>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">{project.name}</h2>
+                  <p className="text-gray-500">{project.description}</p>
+                  <div className="mt-1">{getStatusBadge()}</div>
+                </div>
+                <Button onClick={handleOverviewRep}>Overview</Button>
+              </div>
+              <div className='grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-2 lg:grid-cols-2'>
+                <div>
+                  <div className="px-6 py-4 grid grid-cols-1 w-64 gap-2">
+                    {suppliers.map(s => <Button key={s.uuid} className={`w-full ${selectedSupplierId===s.uuid?'bg-blue-500 text-white':''}`} onClick={()=>handleSupplierClick(s.uuid)}>{s.name}</Button>)}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <Button type="primary" onClick={handleOpenLaunch} icon={<RocketOutlined />}>Launch Project</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+      <div className="mb-4">
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: '1',
+              label: 'Project Overview',
+              children: renderOverview()
+            },
+            {
+              key: 'audiences',
+              label: 'Audience Sources',
+              children: renderAudienceTab()
+            },
+            {
+              key: '4',
+              label: 'Buyer',
+              children: (
+                <Card>
+                  <div>Buyer tab content (to implement)</div>
+                </Card>
+              )
+            },
+            {
+              key: '2',
+              label: 'Respondents',
+              children: (
+                <>
+                  <div className="text-right mb-2">
+                    <Button icon={<DownloadOutlined />} size="small">Download CSV</Button>
+                  </div>
+                  <Table 
+                    dataSource={sessionsData} 
+                    rowKey="uuid" 
+                    pagination={false} 
+                    columns={[
+                      {title:'Quota Code', dataIndex:'target_code', key:'target_code'},
+                      {title:'UUID', dataIndex:'uuid', key:'uuid'},
+                      {title:'Supplier RID', dataIndex:'respondent_id', key:'respondent_id'},
+                      {title:'Status Detail', dataIndex:'status_detail', key:'status_detail'},
+                      {title:'Date (UTC)', dataIndex:'created_at', key:'created_at'}
+                    ]} 
+                    scroll={{x:'max-content'}}
+                  />
+                </>
+              )
+            },
+            {
+              key: '6',
+              label: 'Invoicing',
+              children: (
                 <Table 
-                  dataSource={quotasData} 
-                  rowKey="name" 
-                  pagination={false} 
-                  columns={[
-                    {title:'Name', dataIndex:'name', key:'name'},
-                    {title:'Description', dataIndex:'description', key:'description'},
-                    {title:'CPI', dataIndex:'cpi', key:'cpi', render: (c: number) => `$${c.toFixed(2)}`},
-                    {title:'Complete', key:'complete', render: (_, r: QuotaType) => 
-                      <Progress percent={Math.round((r.complete/r.target)*100)} size="small"/>
-                    },
-                    {title:'Actions', key:'actions', render: (_, r: QuotaType) => 
-                      <Button icon={<EyeOutlined />} size="small" onClick={() => showDetailModal(r)}>View</Button>
+                  dataSource={[
+                    {
+                      item:'Completes sent',
+                      quantity:project.count_complete+project.count_accept+project.count_reject,
+                      cpi:`$${(project.cpi_buyer/100).toFixed(2)}`,
+                      cost:`$${((project.count_complete+project.count_accept+project.count_reject)*(project.cpi_buyer/100)).toFixed(2)}`
                     }
                   ]} 
-                  scroll={{x:'max-content'}}
-                />
-              </>
-            )
-          },
-          {
-            key: '2',
-            label: 'Respondents',
-            children: (
-              <>
-                <div className="text-right mb-2">
-                  <Button icon={<DownloadOutlined />} size="small">Download CSV</Button>
-                </div>
-                <Table 
-                  dataSource={sessionsData} 
-                  rowKey="uuid" 
+                  rowKey="item" 
                   pagination={false} 
                   columns={[
-                    {title:'Quota Code', dataIndex:'target_code', key:'target_code'},
-                    {title:'UUID', dataIndex:'uuid', key:'uuid'},
-                    {title:'Supplier RID', dataIndex:'respondent_id', key:'respondent_id'},
-                    {title:'Status Detail', dataIndex:'status_detail', key:'status_detail'},
-                    {title:'Date (UTC)', dataIndex:'created_at', key:'created_at'}
+                    {title:'Item', dataIndex:'item', key:'item'},
+                    {title:'Quantity', dataIndex:'quantity', key:'quantity'},
+                    {title:'CPI (Avg)', dataIndex:'cpi', key:'cpi'},
+                    {title:'Revenue', dataIndex:'cost', key:'cost'},
+                    {title:'Actions', key:'actions', render: () => (
+                      <Button icon={<DownloadOutlined />} size="small">Download CSV</Button>
+                    )}
                   ]} 
                   scroll={{x:'max-content'}}
                 />
-              </>
-            )
-          },
-          {
-            key: '6',
-            label: 'Invoicing',
-            children: (
-              <Table 
-                dataSource={[
-                  {
-                    item:'Completes sent',
-                    quantity:project.count_complete+project.count_accept+project.count_reject,
-                    cpi:`$${(project.cpi_buyer/100).toFixed(2)}`,
-                    cost:`$${((project.count_complete+project.count_accept+project.count_reject)*(project.cpi_buyer/100)).toFixed(2)}`
-                  }
-                ]} 
-                rowKey="item" 
-                pagination={false} 
-                columns={[
-                  {title:'Item', dataIndex:'item', key:'item'},
-                  {title:'Quantity', dataIndex:'quantity', key:'quantity'},
-                  {title:'CPI (Avg)', dataIndex:'cpi', key:'cpi'},
-                  {title:'Revenue', dataIndex:'cost', key:'cost'},
-                  {title:'Actions', key:'actions', render: () => 
-                    <Button icon={<DownloadOutlined />} size="small">Download CSV</Button>
-                  }
-                ]} 
-                scroll={{x:'max-content'}}
-              />
-            )
-          }
-        ]}
-      />
+              )
+            },
+            {
+              key: '7',
+              label: 'Suppliers',
+              children: (
+                <div>
+                  <div className="text-right mb-2">
+                    <Button icon={<PlusOutlined />} size="small">Add sample provider</Button>
+                  </div>
+                  <Table 
+                    dataSource={suppliers} 
+                    rowKey="uuid" 
+                    pagination={false} 
+                    columns={[
+                      {title:'Name', dataIndex:'name', key:'name'},
+                      {title:'Quota', dataIndex:'quota', key:'quota'},
+                      {title:'Completes', dataIndex:'complete', key:'complete'},
+                      {title:'CPI', dataIndex:'cpi', key:'cpi', render: (c:number) => `$${c.toFixed(2)}`}
+                    ]} 
+                    scroll={{x:'max-content'}}
+                  />
+                </div>
+              )
+            }
+          ]}
+        />
+        <Button icon={<ArrowLeftOutlined />} onClick={handleCloseLaunch}>Back to Project</Button>
+      </div>
+    </div>
+  )}
       {/* Quota Details Modal */}
       <Modal title={`Details – ${detailQuota?.name}`} open={modalVisible} onCancel={closeModal} footer={null} width={700}>
         <Collapse>
           <Collapse.Panel header="Qualifications" key="1">
-            {detailQuota?.qualifications?.map((q, i) => (
+            {detailQuota?.qualifications?.map((q: any, i: number) => (
               <p key={i}>{q.id}: {q.response_ids.join(', ')}</p>
             ))}
           </Collapse.Panel>
@@ -629,11 +715,6 @@ export default function ViewProjectMock() {
             </div>
           </div>
         </div>
-        {/* CleanProjectLaunch and SoftLaunchBreadcrumbs components removed - will be replaced with simpler versions if needed */}
-        {/* 
-          <CleanProjectLaunch />
-          <SoftLaunchBreadcrumbs />
-        */}
         <div className="p-6">
           <Alert
             message="Project Launch Component"

@@ -28,6 +28,7 @@ interface UnifiedProjectCreatorProps {
   onComplete: (data: any) => void;
   showNavigation?: boolean;
   onFeasibilityUpdate?: (data: FeasibilityData) => void;
+  initialData?: Partial<ProjectCreationData>;
 }
 
 // Local modal for project save/launch confirmation
@@ -90,7 +91,7 @@ const ProjectSaveModal: React.FC<{
         <SaveOutlined className="text-blue-500 text-2xl" />
       )}
       <span className={`${isMobile ? 'text-lg' : 'text-xl'} font-medium text-gray-800 truncate`}>
-        {mode === 'launch' ? 'Finalize & Launch Project' : 'Save Project as Draft'}
+        {mode === 'launch' ? 'Setup Project Details' : 'Save Project as Draft'}
       </span>
     </div>
   );
@@ -206,7 +207,7 @@ const ProjectSaveModal: React.FC<{
       title={titleComponent}
       onCancel={onCancel}
       onOk={() => onConfirm(name, description)}
-      okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
+      okText={mode === 'launch' ? 'Create Project' : 'Save Draft'}
       okButtonProps={{
         className: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600 text-white font-medium w-full md:w-auto',
         size: 'large'
@@ -237,11 +238,51 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   onCancel,
   onComplete,
   showNavigation = true,
-  onFeasibilityUpdate
+  onFeasibilityUpdate,
+  initialData
 }) => {
   // State for Custom Audience Request Modal
   const [showCustomAudienceModal, setShowCustomAudienceModal] = useState(false);
   const [customAudienceSubmitting, setCustomAudienceSubmitting] = useState(false);
+
+  // Project data state, hydrated from initialData if provided
+  const [projectData, setProjectData] = useState<ProjectCreationData>(() => {
+    // Use initialData if provided, otherwise default values
+    return {
+      country: initialData?.country ?? 'US',
+      completes: initialData?.completes ?? 100,
+      incidence_rate: initialData?.incidence_rate ?? 25,
+      loi_minutes: initialData?.loi_minutes ?? 10,
+      demographics: initialData?.demographics ?? {},
+      name: initialData?.name ?? '',
+      description: initialData?.description ?? '',
+      language: initialData?.language ?? 'en',
+      languages: initialData?.languages ?? [],
+      quotas: initialData?.quotas ?? [],
+      ...initialData // allow extra/unknown props
+    };
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setProjectData(prev => ({
+        ...prev,
+        ...initialData,
+        country: initialData.country ?? prev.country,
+        completes: initialData.completes ?? prev.completes,
+        incidence_rate: initialData.incidence_rate ?? prev.incidence_rate,
+        loi_minutes: initialData.loi_minutes ?? prev.loi_minutes,
+        demographics: initialData.demographics ?? prev.demographics,
+        name: initialData.name ?? prev.name,
+        description: initialData.description ?? prev.description,
+        language: initialData.language ?? prev.language,
+        languages: initialData.languages ?? prev.languages,
+        quotas: initialData.quotas ?? prev.quotas
+      }));
+    }
+    // Only run on mount or when initialData changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   // Handler for custom audience request submission
   const handleCustomAudienceSubmit = async (description: string) => {
@@ -268,17 +309,8 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   const [modalLoading, setModalLoading] = useState(false);
   const [modalName, setModalName] = useState("");
   const [modalDescription, setModalDescription] = useState("");
-  const [projectData, setProjectData] = useState<Partial<ProjectCreationData> & Record<string, any>>({
-    country: 'US',
-    language: 'en',
-    languages: ['en'],
-    completes: 100,
-    loi_minutes: 15,
-    incidence_rate: 30,
-    survey_id: '',
-    demographics: {},
-    priority_level: 'standard'
-  });
+
+
 
   const [feasibilityData, setFeasibilityData] = useState<FeasibilityData | null>(null);
   // Track if incidence rate was touched
@@ -559,14 +591,14 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 project-creator-container" style={isMobile ? { paddingBottom: '120px' } : {}}>
+    <div className="max-w-7xl mx-auto p-6 project-creator-container" style={isMobile ? { paddingBottom: '180px' } : {}}>
 
 
       <Row gutter={[24, 24]}>
         {/* Main content */}
         <Col xs={24} lg={15}>
           {/* Essential Fields - Always visible first */}
-          <Card title="Step 1: Tell us about your study" className="mb-6">
+          <Card title="Step 1: Define Study Parameters" className="mb-6">
             <Form
               form={form}
               layout="vertical"
@@ -814,7 +846,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
           {/* Project Details - Only shown when needed */}
           
           {/* Demographics Builder */}
-          <Card title="Step 2: Select your target audience" className="mb-6">
+          <Card title="Step 2: Define Audience & Check Feasibility" className="mb-6">
             <DemographicsBuilder
               initialDemographics={projectData.demographics || {}}
               onUpdate={(demographics) => setProjectData(prev => ({ ...prev, demographics }))}
@@ -825,7 +857,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
           <Card 
             title={
               <div className="flex justify-between items-center cursor-pointer" onClick={() => setShowQuotas(!showQuotas)}>
-                <span>Step 3: Fine-tune demographic balance (optional)</span>
+                <span>Step 3: Set Quotas & Distribution (optional)</span>
                 <Button type="link" onClick={(e) => { e.stopPropagation(); setShowQuotas(!showQuotas); }}>
                   {showQuotas ? 'Hide' : 'Show'}
                 </Button>
@@ -1158,7 +1190,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                     onClick={handleLaunch}
                     className="bg-green-500 hover:bg-green-600 border-green-500 min-w-[160px]"
                   >
-                    Finalize & Launch
+                    Create & Setup Project
                   </Button>
                 </Tooltip>
               </div>
@@ -1169,7 +1201,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                 disabled
                 className="min-w-[160px] opacity-50"
               >
-                Finalize & Launch
+                Create & Setup Project
               </Button>
             )}
           </div>

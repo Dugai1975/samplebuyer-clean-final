@@ -286,10 +286,31 @@ export const QuotaBuilder: React.FC<QuotaBuilderProps> = ({
     },
   ];
 
+  // Use state for mobile detection to avoid hydration issues
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Effect for detecting mobile screens
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
   return (
     <Card 
       title="📊 Quota Strategy" 
       className="border-green-200"
+      style={isMobile ? { marginBottom: '80px' } : {}}
       extra={
         <div className="flex space-x-2">
           <Select

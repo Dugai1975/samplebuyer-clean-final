@@ -18,11 +18,13 @@ interface FeasibilityEngineProps {
     demographics?: any;
   };
   onFeasibilityUpdate: (data: FeasibilityData) => void;
+  onCriteriaChange?: (criteria: any) => void; // New prop
 }
 
 export const FeasibilityEngine: React.FC<FeasibilityEngineProps> = ({
   projectData,
-  onFeasibilityUpdate
+  onFeasibilityUpdate,
+  onCriteriaChange
 }) => {
   const [feasibility, setFeasibility] = useState<FeasibilityData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -107,8 +109,50 @@ export const FeasibilityEngine: React.FC<FeasibilityEngineProps> = ({
   const timelineRec = feasibility ? getTimelineRecommendation(feasibility.estimated_timeline_days) : null;
   const totalCost = feasibility ? completesSlider * feasibility.estimated_cpi : 0;
 
+  // Audience configuration section
+  const renderAudienceConfiguration = () => (
+    <Card title="Define Your Target Audience" className="mb-6">
+      <Row gutter={[16, 16]}>
+        <Col span={12}>
+          <label className="block text-sm font-medium mb-2">Country</label>
+          <select
+            className="w-full border rounded px-2 py-1"
+            value={projectData.country}
+            onChange={e => onCriteriaChange?.({ ...projectData, country: e.target.value })}
+          >
+            <option value="US">United States</option>
+            <option value="CA">Canada</option>
+            <option value="UK">United Kingdom</option>
+            <option value="AU">Australia</option>
+          </select>
+        </Col>
+        <Col span={12}>
+          <label className="block text-sm font-medium mb-2">Incidence Rate (%)</label>
+          <Slider
+            min={5}
+            max={80}
+            value={projectData.incidence_rate}
+            onChange={value => onCriteriaChange?.({ ...projectData, incidence_rate: value })}
+            marks={{ 5: '5%', 25: '25%', 50: '50%', 80: '80%' }}
+          />
+        </Col>
+        <Col span={12}>
+          <label className="block text-sm font-medium mb-2">Survey Length (Minutes)</label>
+          <Slider
+            min={1}
+            max={30}
+            value={projectData.loi_minutes}
+            onChange={value => onCriteriaChange?.({ ...projectData, loi_minutes: value })}
+            marks={{ 1: '1 min', 10: '10 min', 20: '20 min', 30: '30 min' }}
+          />
+        </Col>
+      </Row>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
+      {onCriteriaChange && renderAudienceConfiguration()}
       {/* Real-time Quote Header */}
       <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-green-200">
         <div className="text-center">

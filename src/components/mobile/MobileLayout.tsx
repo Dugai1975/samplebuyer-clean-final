@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Drawer, Button, Badge, Avatar } from 'antd';
 import { 
   MenuOutlined, BellOutlined, PlusOutlined, HomeOutlined,
-  SettingOutlined, UserOutlined, CloseOutlined
+  SettingOutlined, UserOutlined, CloseOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { useFeatureFlagContext } from '@/components/shared/FeatureFlagProvider';
@@ -34,7 +34,8 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
   const navigationItems = [
   { key: 'dashboard', path: '/', icon: <HomeOutlined />, label: 'Dashboard', active: pathname === '/' },
-  { key: 'wizard', path: '/wizard', icon: <PlusOutlined />, label: 'Find Audience', active: pathname === '/wizard' },
+  { key: 'feasibility', path: '/feasibility', icon: <ThunderboltOutlined />, label: 'Check Feasibility', active: pathname === '/feasibility' },
+  { key: 'wizard', path: '/wizard', icon: <PlusOutlined />, label: 'Create Project', active: pathname === '/wizard' },
   { key: 'settings', path: '/settings', icon: <SettingOutlined />, label: 'Settings', active: pathname === '/settings' }
 ];
 

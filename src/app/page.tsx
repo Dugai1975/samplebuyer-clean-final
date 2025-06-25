@@ -40,6 +40,10 @@ export default function DashboardPage() {
     router.push(`/monitor/${project.uuid}`);
   };
 
+  const handleFeasibilityCheck = () => {
+    router.push('/feasibility');
+  };
+
   const handleCreateProject = () => {
     router.push('/wizard');
   };
@@ -50,56 +54,40 @@ export default function DashboardPage() {
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">Find Your Perfect Audience</h1>
         <p className="text-gray-600 text-sm mb-6">
-          Get instant pricing and launch in 2 steps
+          Choose your preferred starting point
         </p>
       </div>
-      {/* Mobile 2-step preview */}
+      {/* Dual Path Options */}
       <div className="space-y-3">
-        <Card className="shadow-md p-4 border-l-4 border-l-blue-500">
+        <Card 
+          className="shadow-md p-4 border-l-4 border-l-blue-500 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={handleFeasibilityCheck}
+        >
           <div className="flex items-center mb-2">
-            <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3 text-xs font-bold">1</div>
-            <h3 className="font-semibold text-sm">Check Feasibility</h3>
+            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3 text-sm font-bold">
+              <ThunderboltOutlined />
+            </div>
+            <h3 className="font-semibold text-base">Check Feasibility First</h3>
           </div>
-          <p className="text-xs text-gray-600 ml-9">
-            Define audience and get instant pricing
+          <p className="text-sm text-gray-600 ml-11">
+            Get instant pricing and audience size before creating your project
           </p>
         </Card>
-        <Card className="shadow-md p-4 border-l-4 border-l-green-500">
+        <Card 
+          className="shadow-md p-4 border-l-4 border-l-green-500 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={handleCreateProject}
+        >
           <div className="flex items-center mb-2">
-            <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center mr-3 text-xs font-bold">2</div>
-            <h3 className="font-semibold text-sm">Launch & Collect</h3>
+            <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center mr-3 text-sm font-bold">
+              <RocketOutlined />
+            </div>
+            <h3 className="font-semibold text-base">Create Project Directly</h3>
           </div>
-          <p className="text-xs text-gray-600 ml-9">
-            Add survey link and start collecting
+          <p className="text-sm text-gray-600 ml-11">
+            Start with project setup and configure audience later
           </p>
         </Card>
       </div>
-      {/* Mobile quick start */}
-      <Card className="shadow-md p-4">
-        <TextArea
-          placeholder="Describe your target audience..."
-          rows={3}
-          className="mb-4"
-          style={{ fontSize: '16px' }}
-        />
-        <Button 
-          type="primary" 
-          size="large" 
-          block
-          className="min-h-[44px] mb-3"
-          onClick={() => router.push('/wizard')}
-        >
-          Find My Audience
-        </Button>
-        <Button 
-          size="large" 
-          block
-          className="min-h-[44px]"
-          onClick={() => router.push('/wizard')}
-        >
-          Manual Setup
-        </Button>
-      </Card>
     </div>
   );
 
@@ -284,22 +272,23 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-semibold">Your Projects</h2>
-              <div className="flex gap-2">
+              <div className="flex justify-center space-x-4 mb-8">
                 <Button 
-                  icon={<TableOutlined />} 
-                  type={viewMode === 'table' ? 'primary' : 'default'}
-                  className="min-h-[40px]"
-                  onClick={() => setViewMode('table')}
+                  type="primary" 
+                  size="large" 
+                  icon={<ThunderboltOutlined />}
+                  onClick={handleFeasibilityCheck}
+                  className="h-12 px-8"
                 >
-                  Table
+                  Check Feasibility
                 </Button>
                 <Button 
-                  icon={<AppstoreOutlined />} 
-                  type={viewMode === 'grid' ? 'primary' : 'default'}
-                  className="min-h-[40px]"
-                  onClick={() => setViewMode('grid')}
+                  size="large" 
+                  icon={<PlusOutlined />}
+                  onClick={handleCreateProject}
+                  className="h-12 px-8"
                 >
-                  Grid
+                  Create Project
                 </Button>
               </div>
             </div>

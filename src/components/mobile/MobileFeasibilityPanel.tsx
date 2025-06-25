@@ -75,7 +75,7 @@ const MobileFeasibilityPanel: React.FC<MobileFeasibilityPanelProps> = ({
               size="large"
               className="min-h-[44px] min-w-[44px]"
             >
-              Create Project
+              Check Feasibility
             </Button>
           </div>
         </div>
@@ -196,7 +196,7 @@ const MobileFeasibilityPanel: React.FC<MobileFeasibilityPanelProps> = ({
             size="large"
             className={`min-h-[44px] min-w-[44px] ${isComplete ? 'bg-green-500 hover:bg-green-600 border-green-500' : ''}`}
           >
-            Finalize & Launch
+            Create & Setup Project
           </Button>
         </div>
       </div>

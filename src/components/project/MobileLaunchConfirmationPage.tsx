@@ -53,7 +53,7 @@ const MobileLaunchConfirmationPage: React.FC<MobileLaunchConfirmationPageProps> 
         </button>
         <h1 className="text-lg font-semibold m-0 flex items-center">
           <RocketOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
-          Finalize & Launch
+          Setup Project
         </h1>
         <div style={{ width: '60px' }}></div> {/* Spacer for balance */}
       </div>
@@ -168,7 +168,7 @@ const MobileLaunchConfirmationPage: React.FC<MobileLaunchConfirmationPageProps> 
     type="button"
     style={{ minWidth: 0 }}
   >
-    {loading ? 'Processing...' : 'Launch Project'}
+    {loading ? 'Processing...' : 'Create Project'}
     {!loading && <RocketOutlined style={{ marginLeft: '8px' }} />}
   </button>
 </div>
