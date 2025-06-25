@@ -10,6 +10,7 @@ import './UnifiedProjectCreator.mobile.css';
 import './UnifiedProjectCreator.sticky.css';
 import './UnifiedProjectCreator.sticky-actions.css';
 import './MobileModal.css';
+import './ModalFix.js';
 import { apiService } from '@/services/api';
 import { DemographicsBuilder } from './DemographicsBuilder';
 import QuotaBuilder from './QuotaBuilder';

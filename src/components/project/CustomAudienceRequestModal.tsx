@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Input, Button, Typography, message } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import './MobileModal.css';
+import './ModalFix.js';
 
 const { TextArea } = Input;
 const { Text } = Typography;
