@@ -157,29 +157,15 @@ class ApiService {
     const baseCpi = 2.5 + Math.random() * 3;
     
     return {
-      
-      estimated_cpi: parseFloat(baseCpi.toFixed(2)),
-      estimated_timeline_days: Math.ceil(criteria.completes / 50),
-      confidence_level: 85 + Math.floor(Math.random() * 15),
-      supplier_breakdown: [
-        {
-          supplier_name: 'PureSpectrum',
-          available: Math.floor(baseAvailable * 0.4),
-          cpi: parseFloat((baseCpi * 0.9).toFixed(2)),
-          quality_rating: 94
-        },
-        {
-          supplier_name: 'Cint', 
-          available: Math.floor(baseAvailable * 0.35),
-          cpi: parseFloat((baseCpi * 1.1).toFixed(2)),
-          quality_rating: 91
-        },
-        {
-          supplier_name: 'Dynata',
-          available: Math.floor(baseAvailable * 0.25),
-          cpi: parseFloat((baseCpi * 1.2).toFixed(2)),
-          quality_rating: 88
-        }
+      feasible: true,
+      estimated_cost: parseFloat(baseCpi.toFixed(2)),
+      estimated_time: Math.ceil(criteria.completes / 50) + ' days',
+      available_suppliers: 3,
+      recommended_cpi: parseFloat((baseCpi * 0.95).toFixed(2)),
+      warnings: criteria.incidence_rate < 10 ? ['Low incidence rate may increase costs'] : undefined,
+      recommendations: [
+        'Consider adding screening questions to improve targeting',
+        'Optimize survey length to increase completion rates'
       ]
     };
   }

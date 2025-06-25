@@ -9,8 +9,7 @@ import MobileFeasibilityPanel from '@/components/mobile/MobileFeasibilityPanel';
 import './UnifiedProjectCreator.mobile.css';
 import './UnifiedProjectCreator.sticky.css';
 import './UnifiedProjectCreator.sticky-actions.css';
-import './MobileModal.css';
-import './ModalFix.js';
+import MobileModalWrapper from './MobileModalWrapper';
 import { apiService } from '@/services/api';
 import { DemographicsBuilder } from './DemographicsBuilder';
 import QuotaBuilder from './QuotaBuilder';
@@ -64,46 +63,23 @@ const ProjectSaveModal: React.FC<{
     setDescription(defaultDescription);
   }, [defaultName, defaultDescription, visible]);
 
-  return (
-    <Modal
-      open={visible}
-      title={
-        <div className="flex items-center gap-3 py-2">
-          {mode === 'launch' ? (
-            <RocketOutlined className="text-blue-500 text-2xl" />
-          ) : (
-            <SaveOutlined className="text-blue-500 text-2xl" />
-          )}
-          <span className={`${isMobile ? 'text-lg' : 'text-xl'} font-medium text-gray-800 truncate`}>
-            {mode === 'launch' ? 'Finalize & Launch Project' : 'Save Project as Draft'}
-          </span>
-        </div>
-      }
-      onCancel={onCancel}
-      onOk={() => onConfirm(name, description)}
-      okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
-      okButtonProps={{
-        className: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600 text-white font-medium w-full md:w-auto',
-        size: 'large'
-      }}
-      cancelButtonProps={{
-        size: 'large',
-        className: 'border-gray-300 hover:border-gray-400 font-medium w-full md:w-auto'
-      }}
-      confirmLoading={loading}
-      destroyOnHidden
-      width={isMobile ? '94%' : 560}
-      centered
-      className="project-save-modal"
-      styles={{
-        body: { padding: isMobile ? '16px 12px' : '32px 24px' },
-        content: { maxWidth: isMobile ? '100%' : 560 },
-        mask: { zIndex: 1050 },
-        wrapper: { zIndex: 1051 }
-      }}
-      wrapClassName="mobile-modal-wrapper"
-      closeIcon={<CloseOutlined className="text-gray-500" />}
-    >
+  // Create title component for both modal versions
+  const titleComponent = (
+    <div className="flex items-center gap-3 py-2">
+      {mode === 'launch' ? (
+        <RocketOutlined className="text-blue-500 text-2xl" />
+      ) : (
+        <SaveOutlined className="text-blue-500 text-2xl" />
+      )}
+      <span className={`${isMobile ? 'text-lg' : 'text-xl'} font-medium text-gray-800 truncate`}>
+        {mode === 'launch' ? 'Finalize & Launch Project' : 'Save Project as Draft'}
+      </span>
+    </div>
+  );
+  
+  // Create modal content component
+  const modalContent = (
+    <>
       {/* Warning for untouched default incidence rate */}
       {(!incidenceRateTouched && (incidenceRateValue === 30)) && (
         <div className="flex items-start bg-yellow-50 border border-yellow-200 rounded px-3 py-2 mb-6">
@@ -111,7 +87,7 @@ const ProjectSaveModal: React.FC<{
             <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#FDE68A"/><path d="M10 6v4m0 4h.01" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </span>
           <div className="text-sm text-yellow-800">
-            <b>Incidence Rate:</b> You are using the <b>default value (30%)</b>. This can significantly affect your project’s cost and feasibility. Please review and confirm this is correct for your study.
+            <b>Incidence Rate:</b> You are using the <b>default value (30%)</b>. This can significantly affect your project's cost and feasibility. Please review and confirm this is correct for your study.
           </div>
         </div>
       )}
@@ -190,6 +166,52 @@ const ProjectSaveModal: React.FC<{
           />
         </div>
       </Form>
+    </>
+  );
+  
+  // Render different modal based on device type
+  return isMobile ? (
+    <MobileModalWrapper
+      visible={visible}
+      title={titleComponent}
+      onCancel={onCancel}
+      onOk={() => onConfirm(name, description)}
+      okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
+      cancelText="Cancel"
+      confirmLoading={loading}
+      className="project-save-modal"
+    >
+      {modalContent}
+    </MobileModalWrapper>
+  ) : (
+    <Modal
+      open={visible}
+      title={titleComponent}
+      onCancel={onCancel}
+      onOk={() => onConfirm(name, description)}
+      okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
+      okButtonProps={{
+        className: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600 text-white font-medium w-full md:w-auto',
+        size: 'large'
+      }}
+      cancelButtonProps={{
+        size: 'large',
+        className: 'border-gray-300 hover:border-gray-400 font-medium w-full md:w-auto'
+      }}
+      confirmLoading={loading}
+      destroyOnHidden
+      width={560}
+      centered
+      className="project-save-modal"
+      styles={{
+        body: { padding: '32px 24px' },
+        content: { maxWidth: 560 },
+        mask: { zIndex: 1050 },
+        wrapper: { zIndex: 1051 }
+      }}
+      closeIcon={<CloseOutlined className="text-gray-500" />}
+    >
+      {modalContent}
     </Modal>
   );
 };
