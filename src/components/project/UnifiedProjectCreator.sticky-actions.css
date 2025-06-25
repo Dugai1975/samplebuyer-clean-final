@@ -60,7 +60,7 @@
   margin-left: 1rem;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 899px) {
   .desktop-bottom-panel {
     display: none !important;
   }

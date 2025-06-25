@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Button, Typography, message, Form, Input, Select, Alert, Tooltip, InputNumber, Slider, Tag, Skeleton, Modal } from 'antd';
+import MobileFallbackModal from './MobileFallbackModal';
+import MobileFullScreenDialog from './MobileFullScreenDialog';
+import MobileLaunchModal from './MobileLaunchModal';
+import MobileLaunchConfirmationPage from './MobileLaunchConfirmationPage';
 import { ArrowLeftOutlined, SaveOutlined, RocketOutlined, InfoCircleOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons';
 import type { FeasibilityData, QuotaProgress, ProjectCreationData } from '@/types';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -45,17 +49,31 @@ const ProjectSaveModal: React.FC<{
   // Handle responsive behavior
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 600);
+      // More comprehensive mobile detection
+      const isMobileScreen = window.innerWidth < 600;
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileScreen || isMobileDevice);
     };
 
     // Initial check
     checkMobile();
 
-    // Add resize listener
-    window.addEventListener('resize', checkMobile);
+    // Add resize listener with debouncing
+    let timeoutId: NodeJS.Timeout;
+    const debouncedCheck = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(checkMobile, 100);
+    };
+
+    window.addEventListener('resize', debouncedCheck);
+    window.addEventListener('orientationchange', checkMobile);
 
     // Cleanup
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', debouncedCheck);
+      window.removeEventListener('orientationchange', checkMobile);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -171,18 +189,17 @@ const ProjectSaveModal: React.FC<{
   
   // Render different modal based on device type
   return isMobile ? (
-    <MobileModalWrapper
+    <MobileFullScreenDialog
       visible={visible}
       title={titleComponent}
       onCancel={onCancel}
-      onOk={() => onConfirm(name, description)}
-      okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
+      onConfirm={() => onConfirm(name, description)}
+      confirmText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
       cancelText="Cancel"
       confirmLoading={loading}
-      className="project-save-modal"
     >
       {modalContent}
-    </MobileModalWrapper>
+    </MobileFullScreenDialog>
   ) : (
     <Modal
       open={visible}
@@ -238,13 +255,16 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
     }
   };
 
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery('(max-width: 899px)');
   const [form] = Form.useForm();
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   const [showQuotas, setShowQuotas] = useState(false);
   // Modal state for save/launch
   const [saveModalVisible, setSaveModalVisible] = useState<false | 'draft' | 'launch'>(false);
-  const [pendingSave, setPendingSave] = useState<'draft' | 'launch' | null>(null);
+  const [pendingSave, setPendingSave] = useState<null | 'draft' | 'launch'>(null);
+  
+  // State for mobile launch confirmation page
+  const [showMobileLaunchConfirmation, setShowMobileLaunchConfirmation] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalName, setModalName] = useState("");
   const [modalDescription, setModalDescription] = useState("");
@@ -317,9 +337,53 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   function handleLaunch() {
     setModalName(generateSmartProjectName());
     setModalDescription(generateSmartDescription());
-    setSaveModalVisible('launch');
-    setPendingSave('launch');
+    
+    // For mobile view, show the full-page confirmation
+    if (isMobile) {
+      setShowMobileLaunchConfirmation(true);
+      setSaveModalVisible(false);
+    } else {
+      // For desktop view, show the modal
+      setSaveModalVisible('launch');
+      setPendingSave('launch');
+      setShowMobileLaunchConfirmation(false);
+    }
   }
+
+  
+  // Project summary data for the mobile launch modal
+  const projectSummaryData = {
+    cost: projectData.country === 'US' ? '$350.00' : projectData.country === 'UK' ? '£280.00' : '€320.00',
+    time: '3-5 days',
+    country: projectData.country || 'US',
+    completes: projectData.completes || 100,
+    loi: `${projectData.loi_minutes || 15} min`,
+    ir: projectData.incidence_rate || 30
+  };
+  
+  // Debug function to help troubleshoot visibility issues
+  useEffect(() => {
+    if (saveModalVisible || showMobileLaunchConfirmation) {
+      console.log('Modal visible:', saveModalVisible);
+      console.log('Mobile confirmation page visible:', showMobileLaunchConfirmation);
+      console.log('Is mobile device:', isMobile);
+    }
+  }, [saveModalVisible, showMobileLaunchConfirmation, isMobile]);
+  
+  // Handle responsive state changes when switching between desktop and mobile views
+  useEffect(() => {
+    // When viewport size changes between mobile and desktop
+    if (isMobile && saveModalVisible) {
+      // If we're on mobile but the desktop modal is showing, switch to mobile confirmation
+      setSaveModalVisible(false);
+      setShowMobileLaunchConfirmation(true);
+    } else if (!isMobile && showMobileLaunchConfirmation) {
+      // If we're on desktop but the mobile confirmation is showing, switch to desktop modal
+      setShowMobileLaunchConfirmation(false);
+      setSaveModalVisible('launch');
+      setPendingSave('launch');
+    }
+  }, [isMobile]);
 
   async function handleModalConfirm(name: string, description: string) {
     setModalLoading(true);
@@ -339,6 +403,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
       message.success('Project launched!');
       setModalLoading(false);
       setSaveModalVisible(false);
+      setShowMobileLaunchConfirmation(false);
       onComplete(newProject);
     }
   }
@@ -474,6 +539,24 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
 
   // Determine if we have enough data to enable the launch button
   const isComplete = !!feasibilityData;
+
+  // If mobile launch confirmation is showing, render only that (regardless of device)
+  if (showMobileLaunchConfirmation) {
+    return (
+      <MobileLaunchConfirmationPage
+        defaultName={modalName}
+        defaultDescription={modalDescription}
+        onCancel={() => {
+          setShowMobileLaunchConfirmation(false);
+        }}
+        onConfirm={handleModalConfirm}
+        loading={modalLoading}
+        incidenceRateTouched={incidenceRateTouched}
+        incidenceRateValue={projectData.incidence_rate}
+        projectSummary={projectSummaryData}
+      />
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 project-creator-container" style={isMobile ? { paddingBottom: '120px' } : {}}>
@@ -772,7 +855,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
         
         {/* Feasibility Sidebar - Only visible on desktop */}
         {!isMobile && (
-          <Col lg={9}>
+          <Col md={9} lg={9} xl={8} className="hidden md:block">
             <div className="sticky-sidebar-container">
               <div className="sticky-feasibility-panel">
                 {/* Feasibility Panel - Desktop Only - Sticky */}
@@ -986,20 +1069,26 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                   </Card>
                 )}
 
-
-
                 {/* Project Save/Launch Modal */}
-                <ProjectSaveModal
-                  visible={!!saveModalVisible}
-                  onCancel={() => setSaveModalVisible(false)}
-                  onConfirm={handleModalConfirm}
-                  defaultName={modalName}
-                  defaultDescription={modalDescription}
-                  loading={modalLoading}
-                  mode={saveModalVisible === 'launch' ? 'launch' : 'draft'}
-                  incidenceRateTouched={incidenceRateTouched}
-                  incidenceRateValue={projectData.incidence_rate}
-                />
+                {/* Standard Project Save Modal - Used for desktop or draft scenarios */}
+                {saveModalVisible && (
+                  <ProjectSaveModal
+                    visible={true}
+                    onCancel={() => {
+                      setSaveModalVisible(false);
+                      setPendingSave(null);
+                    }}
+                    onConfirm={handleModalConfirm}
+                    defaultName={modalName}
+                    defaultDescription={modalDescription}
+                    loading={modalLoading}
+                    mode={saveModalVisible}
+                    incidenceRateTouched={incidenceRateTouched}
+                    incidenceRateValue={projectData.incidence_rate}
+                  />
+                )}
+                
+                {/* Mobile Launch Confirmation Page is now rendered at the top level */}
 
                 {/* Custom Audience Request Modal */}
                 <CustomAudienceRequestModal
