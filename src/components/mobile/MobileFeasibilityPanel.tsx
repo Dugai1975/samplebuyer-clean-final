@@ -188,18 +188,16 @@ const MobileFeasibilityPanel: React.FC<MobileFeasibilityPanelProps> = ({
           >
             Save Draft
           </Button>
-          <Tooltip title={!isComplete ? "Complete all required fields" : "Ready to create!"}>
-            <Button 
-              type="primary" 
-              icon={<RocketOutlined />}
-              onClick={onCreateProject}
-              disabled={!isComplete}
-              size="large"
-              className={`min-h-[44px] min-w-[44px] ${isComplete ? 'bg-green-500 hover:bg-green-600 border-green-500' : ''}`}
-            >
-              Create Project
-            </Button>
-          </Tooltip>
+          <Button 
+            type="primary" 
+            icon={<RocketOutlined />}
+            onClick={onCreateProject}
+            disabled={!isComplete}
+            size="large"
+            className={`min-h-[44px] min-w-[44px] ${isComplete ? 'bg-green-500 hover:bg-green-600 border-green-500' : ''}`}
+          >
+            Finalize & Launch
+          </Button>
         </div>
       </div>
     </div>

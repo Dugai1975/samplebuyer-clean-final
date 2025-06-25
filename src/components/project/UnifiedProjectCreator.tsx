@@ -2,15 +2,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Button, Typography, message, Form, Input, Select, Alert, Tooltip, InputNumber, Slider, Tag, Skeleton, Modal } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined, RocketOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, SaveOutlined, RocketOutlined, InfoCircleOutlined, CloseOutlined, SendOutlined } from '@ant-design/icons';
 import type { FeasibilityData, QuotaProgress, ProjectCreationData } from '@/types';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import MobileFeasibilityPanel from '@/components/mobile/MobileFeasibilityPanel';
 import './UnifiedProjectCreator.mobile.css';
 import './UnifiedProjectCreator.sticky.css';
+import './UnifiedProjectCreator.sticky-actions.css';
+import './MobileModal.css';
 import { apiService } from '@/services/api';
 import { DemographicsBuilder } from './DemographicsBuilder';
 import QuotaBuilder from './QuotaBuilder';
+import CustomAudienceRequestModal from './CustomAudienceRequestModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -30,12 +33,30 @@ const ProjectSaveModal: React.FC<{
   onConfirm: (name: string, description: string) => void;
   defaultName: string;
   defaultDescription: string;
-  summary: React.ReactNode;
   loading?: boolean;
   mode: 'draft' | 'launch';
-}> = ({ visible, onCancel, onConfirm, defaultName, defaultDescription, summary, loading, mode }) => {
+  incidenceRateTouched?: boolean;
+  incidenceRateValue?: number;
+}> = ({ visible, onCancel, onConfirm, defaultName, defaultDescription, loading, mode, incidenceRateTouched, incidenceRateValue }) => {
   const [name, setName] = useState(defaultName);
   const [description, setDescription] = useState(defaultDescription);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Handle responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 600);
+    };
+
+    // Initial check
+    checkMobile();
+
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   React.useEffect(() => {
     setName(defaultName);
@@ -45,21 +66,128 @@ const ProjectSaveModal: React.FC<{
   return (
     <Modal
       open={visible}
-      title={mode === 'launch' ? 'Finalize & Launch Project' : 'Save Project as Draft'}
+      title={
+        <div className="flex items-center gap-3 py-2">
+          {mode === 'launch' ? (
+            <RocketOutlined className="text-blue-500 text-2xl" />
+          ) : (
+            <SaveOutlined className="text-blue-500 text-2xl" />
+          )}
+          <span className={`${isMobile ? 'text-lg' : 'text-xl'} font-medium text-gray-800 truncate`}>
+            {mode === 'launch' ? 'Finalize & Launch Project' : 'Save Project as Draft'}
+          </span>
+        </div>
+      }
       onCancel={onCancel}
       onOk={() => onConfirm(name, description)}
       okText={mode === 'launch' ? 'Finalize & Launch' : 'Save Draft'}
+      okButtonProps={{
+        className: 'bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600 text-white font-medium w-full md:w-auto',
+        size: 'large'
+      }}
+      cancelButtonProps={{
+        size: 'large',
+        className: 'border-gray-300 hover:border-gray-400 font-medium w-full md:w-auto'
+      }}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
+      width={isMobile ? '94%' : 560}
+      centered
+      className="project-save-modal"
+      styles={{
+        body: { padding: isMobile ? '16px 12px' : '32px 24px' },
+        content: { maxWidth: isMobile ? '100%' : 560 },
+        mask: { zIndex: 1050 },
+        wrapper: { zIndex: 1051 }
+      }}
+      wrapClassName="mobile-modal-wrapper"
+      closeIcon={<CloseOutlined className="text-gray-500" />}
     >
-      <div className="mb-4">{summary}</div>
-      <Form layout="vertical">
-        <Form.Item label="Project Name" required>
-          <Input value={name} onChange={e => setName(e.target.value)} maxLength={80} />
-        </Form.Item>
-        <Form.Item label="Project Description">
-          <Input.TextArea value={description} onChange={e => setDescription(e.target.value)} rows={3} maxLength={200} />
-        </Form.Item>
+      {/* Warning for untouched default incidence rate */}
+      {(!incidenceRateTouched && (incidenceRateValue === 30)) && (
+        <div className="flex items-start bg-yellow-50 border border-yellow-200 rounded px-3 py-2 mb-6">
+          <span className="mt-0.5 mr-2">
+            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><circle cx="10" cy="10" r="10" fill="#FDE68A"/><path d="M10 6v4m0 4h.01" stroke="#D97706" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </span>
+          <div className="text-sm text-yellow-800">
+            <b>Incidence Rate:</b> You are using the <b>default value (30%)</b>. This can significantly affect your project’s cost and feasibility. Please review and confirm this is correct for your study.
+          </div>
+        </div>
+      )}
+      <div className="mb-6 bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
+        <div className="text-base font-medium text-gray-700 mb-4 flex items-center gap-2">
+          <InfoCircleOutlined className="text-blue-400 text-lg" />
+          <span>Project Summary</span>
+        </div>
+        <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-x-8 gap-y-3 text-base`}>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-3 min-w-[70px] sm:min-w-[80px]">Cost:</span>
+            <span className="font-medium text-gray-800">
+              {name.includes('US') ? '$350.00' : name.includes('UK') ? '£280.00' : '€320.00'}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-3 min-w-[70px] sm:min-w-[80px]">Time:</span>
+            <span className="font-medium text-gray-800">3-5 days</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-3 min-w-[70px] sm:min-w-[80px]">Country:</span>
+            <span className="font-medium text-gray-800">
+              {name.includes('US') ? 'US' : name.includes('UK') ? 'UK' : 'EU'}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-3 min-w-[70px] sm:min-w-[80px]">Completes:</span>
+            <span className="font-medium text-gray-800">100</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-3 min-w-[70px] sm:min-w-[80px]">LOI:</span>
+            <span className="font-medium text-gray-800">15 min</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-gray-500 mr-3 min-w-[70px] sm:min-w-[80px]">IR:</span>
+            <span className="font-medium text-gray-800">{incidenceRateValue}%</span>
+          </div>
+        </div>
+      </div>
+      
+      <Form layout="vertical" className="mt-2">
+        <div className="mb-1 flex items-center">
+          <span className="text-red-500 mr-1">*</span>
+          <span className="text-base text-gray-700 font-medium">Project Name</span>
+          <div className="ml-auto">
+            <Tag color="blue" className="text-xs border-0 bg-blue-100 text-blue-500 py-0.5 px-3 font-normal rounded-full">
+              Auto-generated
+            </Tag>
+          </div>
+        </div>
+        <div className="mb-6">
+          <Input 
+            value={name} 
+            onChange={e => setName(e.target.value)} 
+            maxLength={80} 
+            size="large"
+            className="w-full font-medium border-gray-200 hover:border-blue-400 focus:border-blue-500 rounded-md py-2 px-3"
+          />
+        </div>
+        <div className="flex items-center mb-1">
+          <span className="text-base text-gray-700 font-medium">Project Description</span>
+          <div className="ml-auto">
+            <Tag color="blue" className="text-xs border-0 bg-blue-100 text-blue-500 py-0.5 px-3 font-normal rounded-full">
+              Auto-generated
+            </Tag>
+          </div>
+        </div>
+        <div>
+          <Input.TextArea 
+            value={description} 
+            onChange={e => setDescription(e.target.value)} 
+            rows={3} 
+            maxLength={200} 
+            className="w-full text-sm border-gray-200 hover:border-blue-400 focus:border-blue-500 rounded-md"
+            placeholder="Brief description of your research project"
+          />
+        </div>
       </Form>
     </Modal>
   );
@@ -71,6 +199,22 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   showNavigation = true,
   onFeasibilityUpdate
 }) => {
+  // State for Custom Audience Request Modal
+  const [showCustomAudienceModal, setShowCustomAudienceModal] = useState(false);
+  const [customAudienceSubmitting, setCustomAudienceSubmitting] = useState(false);
+
+  // Handler for custom audience request submission
+  const handleCustomAudienceSubmit = async (description: string) => {
+    setCustomAudienceSubmitting(true);
+    try {
+      // TODO: Replace with real API call
+      await new Promise(res => setTimeout(res, 800));
+      // Optionally log or send to backend here
+    } finally {
+      setCustomAudienceSubmitting(false);
+    }
+  };
+
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [form] = Form.useForm();
   const [showProjectDetails, setShowProjectDetails] = useState(false);
@@ -94,6 +238,8 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   });
 
   const [feasibilityData, setFeasibilityData] = useState<FeasibilityData | null>(null);
+  // Track if incidence rate was touched
+  const [incidenceRateTouched, setIncidenceRateTouched] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
   const [quotaData, setQuotaData] = useState<QuotaProgress[]>([]);
   const [showReview, setShowReview] = useState(false);
@@ -308,17 +454,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto p-6 project-creator-container" style={isMobile ? { paddingBottom: '120px' } : {}}>
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <Button 
-            type="text" 
-            icon={<ArrowLeftOutlined />} 
-            onClick={onCancel}
-            className="mr-2"
-          />
-          <Title level={4} className="m-0">Create New Project</Title>
-        </div>
-      </div>
+
 
       <Row gutter={[24, 24]}>
         {/* Main content */}
@@ -381,45 +517,89 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                     name="completes"
                     rules={[{ required: true, message: 'Please enter sample size' }]}
                   >
-                    <InputNumber
-                      style={{ width: '100%' }}
-                      min={50}
-                      max={10000}
-                      step={50}
-                      size="large"
-                      onChange={(value) => setProjectData(prev => ({ ...prev, completes: value as number }))}
-                      onFocus={(e) => e.target.select()}
-                    />
-                  </Form.Item>
-                  <div className="text-xs text-gray-500">
-                    <Tooltip title="Margin of error at 95% confidence level. Increasing sample size improves accuracy with diminishing returns">
-                      <span className="cursor-help">
-                        Current margin of error: ±{calculateMarginOfError(projectData.completes || 100)}%
-                      </span>
-                    </Tooltip>
-                    <div className="mt-2 space-y-2">
-                      <div className="cursor-pointer" onClick={() => {
-                        form.setFieldsValue({ completes: 100 });
-                        setProjectData(prev => ({ ...prev, completes: 100 }));
-                      }}>
-                        <Tag color="orange">Directional</Tag>
-                        <span className="ml-1 hover:text-blue-600">n=100 (±{calculateMarginOfError(100)}%) - Quick insights and general trends</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-grow pr-2" style={{ width: 'calc(100% - 110px)' }}>
+                        <Slider
+                          min={100}
+                          max={1000}
+                          step={50}
+                          value={projectData.completes}
+                          marks={{
+                            100: '100',
+                            400: '400',
+                            700: '700',
+                            1000: '1000'
+                          }}
+                          tooltip={{ formatter: (value) => `${value} completes` }}
+                          onChange={(value) => {
+                            form.setFieldsValue({ completes: value });
+                            setProjectData(prev => ({ ...prev, completes: value as number }));
+                          }}
+                        />
                       </div>
-                      <div className="cursor-pointer" onClick={() => {
-                        form.setFieldsValue({ completes: 400 });
-                        setProjectData(prev => ({ ...prev, completes: 400 }));
-                      }}>
-                        <Tag color="blue">Base</Tag>
-                        <span className="ml-1 hover:text-blue-600">n=400 (±{calculateMarginOfError(400)}%) - Analyze 2-3 subgroups</span>
-                      </div>
-                      <div className="cursor-pointer" onClick={() => {
-                        form.setFieldsValue({ completes: 1000 });
-                        setProjectData(prev => ({ ...prev, completes: 1000 }));
-                      }}>
-                        <Tag color="green">Advanced</Tag>
-                        <span className="ml-1 hover:text-blue-600">n=1000 (±{calculateMarginOfError(1000)}%) - Multiple segments analysis</span>
+                      <div style={{ width: '100px', flexShrink: 0 }}>
+                        <InputNumber
+                          style={{ width: '100%' }}
+                          min={50}
+                          max={10000}
+                          step={50}
+                          size="large"
+                          value={projectData.completes}
+                          onChange={(value) => setProjectData(prev => ({ ...prev, completes: value as number }))}
+                          onFocus={(e) => e.target.select()}
+                        />
                       </div>
                     </div>
+                  </Form.Item>
+                  <div className="flex items-center mb-3">
+                    <InfoCircleOutlined className="text-gray-400 mr-1.5" />
+                    <span className="text-xs text-gray-500">
+                      Current margin of error: <span className="font-medium">±{calculateMarginOfError(projectData.completes || 100)}%</span> at 95% confidence level
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Tooltip title="n=100 (±9.8%) - Quick insights and general trends">
+                      <Button 
+                        type={projectData.completes === 100 ? "primary" : "default"}
+                        className={projectData.completes === 100 ? "bg-orange-500 hover:bg-orange-600 border-orange-500" : "border-orange-400 text-orange-500"}
+                        size="small"
+                        onClick={() => {
+                          form.setFieldsValue({ completes: 100 });
+                          setProjectData(prev => ({ ...prev, completes: 100 }));
+                        }}
+                      >
+                        <span className="font-medium">Directional</span>
+                        <span className="ml-1 opacity-80">n=100</span>
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="n=400 (±4.9%) - Analyze 2-3 subgroups">
+                      <Button 
+                        type={projectData.completes === 400 ? "primary" : "default"}
+                        className={projectData.completes === 400 ? "bg-blue-500 hover:bg-blue-600 border-blue-500" : "border-blue-400 text-blue-500"}
+                        size="small"
+                        onClick={() => {
+                          form.setFieldsValue({ completes: 400 });
+                          setProjectData(prev => ({ ...prev, completes: 400 }));
+                        }}
+                      >
+                        <span className="font-medium">Base</span>
+                        <span className="ml-1 opacity-80">n=400</span>
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="n=1000 (±3.1%) - Multiple segments analysis">
+                      <Button 
+                        type={projectData.completes === 1000 ? "primary" : "default"}
+                        className={projectData.completes === 1000 ? "bg-green-500 hover:bg-green-600 border-green-500" : "border-green-400 text-green-500"}
+                        size="small"
+                        onClick={() => {
+                          form.setFieldsValue({ completes: 1000 });
+                          setProjectData(prev => ({ ...prev, completes: 1000 }));
+                        }}
+                      >
+                        <span className="font-medium">Advanced</span>
+                        <span className="ml-1 opacity-80">n=1000</span>
+                      </Button>
+                    </Tooltip>
                   </div>
                 </Col>
                 
@@ -433,21 +613,17 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                     <div className="flex items-center space-x-2">
                       <div className="flex-grow pr-2" style={{ width: 'calc(100% - 110px)' }}>
                         <Slider
-                          min={1}
+                          min={10}
                           max={100}
+                          step={1}
                           value={projectData.incidence_rate}
-                          marks={{
-                            10: '10%',
-                            30: '30%',
-                            50: '50%',
-                            70: '70%',
-                            90: '90%'
+                          onChange={val => {
+                            setProjectData(prev => ({ ...prev, incidence_rate: val }));
+                            setIncidenceRateTouched(true);
                           }}
+                          onFocus={() => setIncidenceRateTouched(true)}
+                          marks={{ 10: '10%', 30: '30%', 50: '50%', 70: '70%', 100: '100%' }}
                           tooltip={{ formatter: (value) => `${value}%` }}
-                          onChange={(value) => {
-                            form.setFieldsValue({ incidence_rate: value });
-                            setProjectData(prev => ({ ...prev, incidence_rate: value as number }));
-                          }}
                         />
                       </div>
                       <div style={{ width: '100px', flexShrink: 0 }}>
@@ -723,6 +899,19 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                       {/* Manual calculation button removed as it's not needed */}
                     </div>
                   )}
+                  {/* Custom Audience Request Callout after failed/low feasibility */}
+                  {!feasibilityData?.feasible && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-md p-3 mt-4 flex items-start">
+                      <SendOutlined className="mr-2 text-blue-400 mt-0.5" />
+                      <div>
+                        <div className="font-medium text-blue-800 text-sm mb-1">Can’t find your audience?</div>
+                        <div className="text-xs text-blue-700 mb-2">Submit a request and our team will help you reach even the hardest-to-find respondents.</div>
+                        <Button size="small" type="primary" ghost onClick={() => setShowCustomAudienceModal(true)}>
+                          Request Custom Audience
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </Card>
 
                 {/* Current Targeting Card */}
@@ -774,47 +963,7 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                   </Card>
                 )}
 
-                {/* Sticky Action Buttons - Desktop Only */}
-                <div className="sticky-action-buttons">
-                  <div>
-                    <Button 
-                      icon={<SaveOutlined />} 
-                      onClick={handleSaveDraft} 
-                      size="large"
-                      loading={isCalculating}
-                      className="min-w-[120px]"
-                    >
-                      Save Draft
-                    </Button>
-                  </div>
-                  <div>
-                    {isComplete ? (
-                      <div className="relative inline-block">
-                        <div className="absolute -top-3 -right-3 w-5 h-5 bg-green-500 rounded-full animate-pulse"></div>
-                        <Tooltip title="Ready to launch!" placement="top">
-                          <Button 
-                            type="primary"
-                            size="large"
-                            icon={<RocketOutlined />}
-                            onClick={handleLaunch}
-                            className="bg-green-500 hover:bg-green-600 border-green-500 min-w-[160px]"
-                          >
-                            Finalize & Launch
-                          </Button>
-                        </Tooltip>
-                      </div>
-                    ) : (
-                      <Button 
-                        type="primary"
-                        size="large"
-                        disabled
-                        className="min-w-[160px] opacity-50"
-                      >
-                        Finalize & Launch
-                      </Button>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Project Save/Launch Modal */}
                 <ProjectSaveModal
@@ -823,18 +972,17 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
                   onConfirm={handleModalConfirm}
                   defaultName={modalName}
                   defaultDescription={modalDescription}
-                  summary={
-                    <div>
-                      <div><b>Estimated Cost:</b> ${feasibilityData?.estimated_cost?.toFixed(2) ?? '-'}</div>
-                      <div><b>Estimated Time:</b> {feasibilityData?.estimated_time ?? '-'} days</div>
-                      <div><b>Country:</b> {projectData.country}</div>
-                      <div><b>Completes:</b> {projectData.completes}</div>
-                      <div><b>LOI:</b> {projectData.loi_minutes} min</div>
-                      <div><b>Incidence Rate:</b> {projectData.incidence_rate}%</div>
-                    </div>
-                  }
                   loading={modalLoading}
                   mode={saveModalVisible === 'launch' ? 'launch' : 'draft'}
+                  incidenceRateTouched={incidenceRateTouched}
+                  incidenceRateValue={projectData.incidence_rate}
+                />
+
+                {/* Custom Audience Request Modal */}
+                <CustomAudienceRequestModal
+                  visible={showCustomAudienceModal}
+                  onCancel={() => setShowCustomAudienceModal(false)}
+                  onSubmit={handleCustomAudienceSubmit}
                 />
               </div>
             </div>
@@ -853,6 +1001,67 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
           className="mobile-feasibility-panel"
           demographics={projectData.demographics}
         />
+      )}
+
+      {/* Desktop Sticky Bottom Panel for Action Buttons */}
+      {!isMobile && (
+        <div className="desktop-bottom-panel">
+          <div className="desktop-bottom-panel-inner">
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+              <button
+                className="return-dashboard-link"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#888',
+                  fontSize: '13px',
+                  padding: 0,
+                  marginRight: 'auto',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  lineHeight: 1.2
+                }}
+                onClick={onCancel}
+              >
+                &larr; Return to Dashboard
+              </button>
+            </div>
+            <Button 
+              icon={<SaveOutlined />} 
+              onClick={handleSaveDraft} 
+              size="large"
+              loading={isCalculating}
+              className="min-w-[120px]"
+            >
+              Save Draft
+            </Button>
+            {isComplete ? (
+              <div className="relative inline-block">
+                <div className="absolute -top-3 -right-3 w-5 h-5 bg-green-500 rounded-full animate-pulse"></div>
+                <Tooltip title="Ready to launch!" placement="top">
+                  <Button 
+                    type="primary"
+                    size="large"
+                    icon={<RocketOutlined />}
+                    onClick={handleLaunch}
+                    className="bg-green-500 hover:bg-green-600 border-green-500 min-w-[160px]"
+                  >
+                    Finalize & Launch
+                  </Button>
+                </Tooltip>
+              </div>
+            ) : (
+              <Button 
+                type="primary"
+                size="large"
+                disabled
+                className="min-w-[160px] opacity-50"
+              >
+                Finalize & Launch
+              </Button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
