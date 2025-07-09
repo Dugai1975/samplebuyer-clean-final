@@ -1,0 +1,958 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { notification } from 'antd';
+import {
+  Table,
+  Button,
+  Progress,
+  Tag,
+  Typography,
+  Select,
+  Input,
+  Tabs,
+  Card,
+  Collapse,
+  Modal,
+  Row,
+  Col,
+  Space,
+  Alert,
+  Divider,
+  Dropdown,
+  Menu,
+  theme,
+  Tooltip,
+  Form,
+} from 'antd';
+import {
+  PlusOutlined,
+  CopyOutlined,
+  ArrowLeftOutlined,
+  BarChartOutlined,
+  PauseCircleOutlined,
+  TeamOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  FilePdfOutlined,
+  PrinterOutlined,
+  SettingOutlined,
+  UserOutlined,
+  DollarOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  InfoCircleOutlined,
+  LinkOutlined
+} from '@ant-design/icons';
+import DonutChart from '@/components/projectDetail/DonutChart';
+import StableChartContainer from '@/components/StableChartContainer';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { Panel } = Collapse;
+
+interface ProjectDetailViewProps {
+  projectData?: any;
+  feasibilityData?: any;
+}
+
+interface SourceType {
+  uuid: string;
+  name: string;
+  created: string;
+  completes: number;
+  target: number;
+  pace: number;
+  status: string;
+  lastResponse: string;
+}
+
+interface QuotaType {
+  uuid: string;
+  name: string;
+  code: string;
+  description: string;
+  cpi: number;
+  target: number;
+  complete: number;
+  failure: number;
+  live_link: string;
+  check_link: string;
+}
+
+interface TestResultType {
+  success: boolean;
+  message: string;
+  type?: string;
+}
+
+const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectData, feasibilityData }) => {
+  const { token } = theme.useToken();
+  
+  // Define project data interface
+  interface ProjectData {
+    uuid: string;
+    name: string;
+    description: string;
+    total_available: number;
+    count_complete: number;
+    count_accept: number;
+    count_reject: number;
+    count_terminate: number;
+    count_over_quota: number;
+    cpi_buyer: number;
+    state: string;
+    buyer: {
+      name: string;
+      complete_link: string;
+      terminate_link: string;
+      quota_link: string;
+      duplicate_link: string;
+      quality_link: string;
+      screenout_link: string;
+      timeout_link: string;
+      redirect_url: string;
+    };
+  }
+
+  // Initialize state with either provided project data or default values
+  const [project, setProject] = useState<ProjectData>(() => {
+    return projectData || {
+      uuid: projectData?.uuid || 'mock-project',
+      name: feasibilityData?.name || 'Mock Project Name',
+      description: feasibilityData?.description || 'Project description goes here.',
+      total_available: feasibilityData?.completes || 150,
+      count_complete: 35,
+      count_accept: 35,
+      count_reject: 0,
+      count_terminate: 10,
+      count_over_quota: 1,
+      cpi_buyer: feasibilityData?.estimated_cpi ? feasibilityData.estimated_cpi * 100 : 200,
+      state: 'active',
+      buyer: {
+        name: 'Client',
+        complete_link: 'https://example.com/complete',
+        terminate_link: 'https://example.com/terminate',
+        quota_link: 'https://example.com/quota',
+        duplicate_link: 'https://example.com/duplicate',
+        quality_link: 'https://example.com/quality',
+        screenout_link: 'https://example.com/screenout',
+        timeout_link: 'https://example.com/timeout',
+        redirect_url: 'https://example.com/redirect'
+      }
+    };
+  });
+
+  // State for suppliers/sources
+  const [sources, setSources] = useState<SourceType[]>([
+    { 
+      uuid: 'sup-1', 
+      name: 'Test Mock Supplier', 
+      created: '06/30/2025, 08:47:38 AM', 
+      completes: 20, 
+      target: 100, 
+      pace: 3, 
+      status: 'active',
+      lastResponse: '7/9/2025'
+    },
+    { 
+      uuid: 'sup-2', 
+      name: 'Cint', 
+      created: '06/30/2025, 10:52:41 AM', 
+      completes: 15, 
+      target: 100, 
+      pace: 2, 
+      status: 'active',
+      lastResponse: '7/9/2025'
+    }
+  ]);
+
+  // State for quotas
+  const [quotas, setQuotas] = useState<QuotaType[]>(() => {
+    // If we have feasibility data, create a quota based on it
+    if (feasibilityData) {
+      return [{
+        uuid: 'q1',
+        name: `${feasibilityData.country || 'Global'} Audience`,
+        code: 'G1',
+        description: `${feasibilityData.country || 'Global'} audience, IR: ${feasibilityData.incidence_rate || 100}%, LOI: ${feasibilityData.loi_minutes || 10}min`,
+        cpi: feasibilityData.estimated_cpi || 1.00,
+        target: feasibilityData.completes || 100,
+        complete: 0,
+        failure: 0,
+        live_link: 'https://sample-router.example.com/router/live?t=sample-token&rid={RID}',
+        check_link: 'https://sample-router.example.com/router/live-check?t=sample-token&rid={RID}'
+      }];
+    } else {
+      return [{
+        uuid: 'q1',
+        name: 'Default Quota',
+        code: 'G1',
+        description: 'Default quota group',
+        cpi: 1.00,
+        target: 100,
+        complete: 0,
+        failure: 0,
+        live_link: 'https://sample-router.example.com/router/live?t=sample-token&rid={RID}',
+        check_link: 'https://sample-router.example.com/router/live-check?t=sample-token&rid={RID}'
+      }];
+    }
+  });
+
+  // UI state
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentView, setCurrentView] = useState('overview');
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [liveLink, setLiveLink] = useState('');
+  const [testLink, setTestLink] = useState('');
+  const [testResult, setTestResult] = useState<TestResultType | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [detailQuota, setDetailQuota] = useState<QuotaType | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [filterSupplier, setFilterSupplier] = useState<string | null>(null);
+  const [isTestingLink, setIsTestingLink] = useState(false);
+  const router = useRouter();
+  const { token: { colorBgContainer } } = theme.useToken();
+
+  // Helper function for copying text to clipboard
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        console.log('Copied to clipboard:', text);
+      })
+      .catch(err => {
+        console.error('Failed to copy:', err);
+      });
+  };
+
+  // Set up timer for updating current time
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Mobile detection
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate percentage helper
+  const calcPercent = (value: number, total: number) => {
+    if (!total) return 0;
+    return Math.min(100, Math.round((value / total) * 100));
+  };
+
+  // Function to calculate total completes from all sources
+  const getTotalCompletes = useCallback(() => {
+    return sources.reduce((sum, source) => sum + (source.completes || 0), 0);
+  }, [sources]);
+
+  // Navigation functions
+  const navigateToOverview = () => {
+    setSelectedSource(null);
+    setCurrentView('overview');
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const navigateToSource = (sourceId: string) => {
+    setSelectedSource(sourceId);
+    setCurrentView('source');
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const handleSupplierClick = (uuid: string) => {
+    setFilterSupplier(uuid === filterSupplier ? null : uuid);
+  };
+
+  const showDetailModal = (quota: QuotaType) => {
+    setDetailQuota(quota);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => setModalVisible(false);
+
+  const handleAddSource = () => {
+    // Create a new source with default values
+    const newSource: SourceType = {
+      uuid: `sup-${sources.length + 1}`,
+      name: `New Source ${sources.length + 1}`,
+      created: new Date().toLocaleString(),
+      status: 'active',
+      completes: 0,
+      target: 100,
+      pace: 0,
+      lastResponse: '-'
+    };
+    
+    // Add to sources array
+    setSources([...sources, newSource]);
+    
+    // Show notification
+    console.log('Source added');
+  };
+
+  // Project-level survey links tab
+  const renderProjectSurveyLinks = () => {
+    // Function to test links
+    const testSurveyLink = (linkType: string) => {
+      // Get the correct link based on type
+      const linkToTest = linkType === 'live' ? liveLink : testLink;
+      
+      // Set loading state
+      setIsTestingLink(true);
+      setTestResult({
+        success: false,
+        message: `Testing ${linkType} link...`,
+        type: 'loading'
+      });
+      
+      // Simulate API call
+      setTimeout(() => {
+        setIsTestingLink(false);
+        // Random success/failure for demo purposes
+        const success = Math.random() > 0.3;
+        
+        setTestResult({
+          success: success,
+          message: success 
+            ? `${linkType} link is working correctly` 
+            : `${linkType} link test failed. Please check the URL.`,
+          type: success ? 'success' : 'error'
+        });
+      }, 1500);
+    };
+    
+    const testLiveLink = () => testSurveyLink('live');
+    const testTestLink = () => testSurveyLink('test');
+    
+    return (
+      <div className="px-4">
+        <div className="flex justify-between items-center mb-4">
+          <Title level={4}>Survey Links</Title>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Tag color="green" className="min-w-[50px] text-center">Live</Tag>
+              <Input
+                placeholder="Add your live survey link here (e.g., https://sample-router.example.com/router/live?t=...)"
+                value={liveLink}
+                onChange={(e) => setLiveLink(e.target.value)}
+                className="flex-1"
+                addonAfter={
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={testLiveLink}
+                    loading={isTestingLink && testResult?.type === 'live'}
+                    disabled={!liveLink}
+                  >
+                    Test
+                  </Button>
+                }
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Tag color="blue" className="min-w-[50px] text-center">Test</Tag>
+              <Input
+                placeholder="Add your test survey link here (e.g., https://sample-router.example.com/router/test?t=...)"
+                value={testLink}
+                onChange={(e) => setTestLink(e.target.value)}
+                className="flex-1"
+                addonAfter={
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={testTestLink}
+                    loading={isTestingLink && testResult?.type === 'test'}
+                    disabled={!testLink}
+                  >
+                    Test
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+          
+          {testResult && (
+            <Alert
+              message={testResult.success ? "Test Successful" : "Test Failed"}
+              description={testResult.message}
+              type={testResult.success ? "success" : "error"}
+              showIcon
+              closable
+              onClose={() => setTestResult(null)}
+            />
+          )}
+          
+          <div className="mt-4">
+            <Text type="secondary">
+              Add your survey links above. The {'{RID}'} placeholder in your links will be automatically 
+              replaced with the respondent ID when the survey is launched.
+            </Text>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render the overview tab
+  const renderOverview = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      {sources.map(supplier => {
+        // Calculate total completes and target for this supplier
+        const totalCompletes = supplier.completes || 0;
+        const totalTarget = 100; // Example target
+        
+        return (
+          <Card key={supplier.uuid} className="relative">
+            <div className="mb-3">
+              <div className="flex justify-between items-center mb-1">
+                <div className="font-medium text-base">{supplier.name}</div>
+                <Tag color="blue">{supplier.uuid}</Tag>
+              </div>
+              <div className="text-xs text-gray-500">{supplier.name} - Added {supplier.created}</div>
+            </div>
+            
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm">Completes: <strong>{totalCompletes}</strong> of {totalTarget}</span>
+              <span className="text-sm text-gray-500">Pace: {supplier.pace}/hr</span>
+            </div>
+            <Progress 
+              percent={calcPercent(totalCompletes, totalTarget)} 
+              size="small" 
+              format={() => `${Math.round(calcPercent(totalCompletes, totalTarget))}%`}
+            />
+            
+            <div className="text-sm pt-2 flex justify-between">
+              <span>Status: <strong>{supplier.status || 'active'}</strong></span>
+              <span className="text-gray-500 text-xs">Last response: {new Date().toLocaleDateString()}</span>
+            </div>
+            
+            <div className="mt-3 flex justify-between">
+              <div className="flex gap-2">
+                <Button icon={<PauseCircleOutlined />} size="small">Pause</Button>
+                <Button
+                  icon={<BarChartOutlined />}
+                  size="small"
+                  onClick={() => navigateToSource(supplier.uuid)}
+                >
+                  Details
+                </Button>
+              </div>
+              <Button 
+                icon={<EyeOutlined />} 
+                size="small" 
+                type="text"
+                onClick={() => navigateToSource(supplier.uuid)}
+              >
+                View Source
+              </Button>
+            </div>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
+  // Render the project header
+  const renderProjectHeader = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 items-center">
+      {/* LEFT: Project Info */}
+      <div>
+        <Title level={2} className="mb-1 flex items-center gap-2">
+          {project.name}
+          <Button icon={<CopyOutlined />} size="small" onClick={() => copyToClipboard(project.name)} />
+        </Title>
+        <div className="text-gray-500 mb-2">
+          <span className="font-medium">Project ID:</span> {project.uuid}
+        </div>
+        <div className="mb-2">Description: {project.description}</div>
+      </div>
+      {/* RIGHT: Chart and KPIs */}
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-[180px] h-[180px] flex-none flex items-center justify-center">
+          <DonutChart
+            data={{
+              labels: ['Completed', 'Remaining'],
+              datasets: [
+                {
+                  data: [
+                    Math.max(project.count_complete, 0),
+                    Math.max(project.total_available - project.count_complete, 0)
+                  ],
+                  backgroundColor: ['#22c55e', '#e5e7eb'],
+                  borderWidth: 0,
+                },
+              ],
+            }}
+            size={180}
+          />
+        </div>
+        <div className="text-center -mt-10">
+          <div className="text-lg font-bold text-green-600">
+            {project.total_available > 0
+              ? ((project.count_complete / project.total_available) * 100).toFixed(2)
+              : '0.00'} %
+          </div>
+          <div className="text-xs text-gray-600">Completed</div>
+        </div>
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 gap-4 mt-4 w-full">
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1">Sample available</div>
+            <div className="text-2xl font-bold">{project.total_available}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1">CPI</div>
+            <div className="text-2xl font-bold">${(project.cpi_buyer / 100).toFixed(2)}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1">Completed</div>
+            <div className="text-2xl font-bold">{project.count_complete}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1">Over Quotas</div>
+            <div className="text-2xl font-bold">{project.count_over_quota}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1">Terminated</div>
+            <div className="text-2xl font-bold">{project.count_terminate}</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="text-xs text-gray-500 mb-1">Status</div>
+            <Tag color="green">Active</Tag>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Main render
+  return (
+    <div className="flex h-full">
+      {/* Sidebar */}
+      <div className="w-60 bg-white border-r border-gray-200 flex flex-col h-full">
+        <div className="p-4 border-b border-gray-200">
+          <Tag color="green" className="mb-2">Active</Tag>
+          <Typography.Title level={5} className="m-0">{project.name}</Typography.Title>
+        </div>
+        
+        <div className="p-4 border-b border-gray-200">
+          <Typography.Text type="secondary" className="block mb-2">PROJECT</Typography.Text>
+          <div className="flex items-center p-2 bg-blue-50 rounded-lg text-blue-600">
+            <BarChartOutlined className="mr-2" />
+            <span className="font-medium">Overview</span>
+          </div>
+        </div>
+        
+        <div className="p-4 border-b border-gray-200">
+          <Typography.Text type="secondary" className="block mb-2">RESPONSE SOURCES</Typography.Text>
+          
+          {sources.map(source => (
+            <div key={source.uuid} className="mb-3">
+              <div className="flex justify-between items-center">
+                <span>{source.name}</span>
+                <Tag color="green">Active</Tag>
+            </div>
+          </Card>
+        </div>
+        
+        {/* Source details tabs */}
+        <Tabs defaultActiveKey="overview" className="source-tabs" items={[
+          {
+            key: 'overview',
+            label: 'Overview',
+            children: (
+              <div className="p-4">
+                <Card title="Response Progress" className="mb-4">
+                  <Progress 
+                    percent={calcPercent(source.completes || 0, source.target || 100)} 
+                    status="active"
+                  />
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Text type="secondary">Completes</Text>
+                      <div className="text-xl font-bold">{source.completes || 0}</div>
+                    </div>
+                    <div>
+                      <Text type="secondary">Target</Text>
+                      <div className="text-xl font-bold">{source.target || 100}</div>
+                    </div>
+                    <div>
+                      <Text type="secondary">Remaining</Text>
+                      <div className="text-xl font-bold">{(source.target || 100) - (source.completes || 0)}</div>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card title="Response Trend" className="mb-4">
+                  <div className="h-64 bg-gray-50 flex items-center justify-center">
+                    <Text type="secondary">Response trend chart would appear here</Text>
+                  </div>
+                </Card>
+              </div>
+            )
+          },
+          {
+            key: 'survey-links',
+            label: 'Survey Links',
+            children: (
+              <div className="p-4">
+                <Card title="Survey Links for this Source">
+                  <div className="mb-4">
+                    <div className="mb-2">
+                      <Tag color="blue">Live Link</Tag>
+                    </div>
+                    <Input.Group compact>
+                      <Input 
+                        style={{ width: 'calc(100% - 70px)' }} 
+                        value={`${liveLink}?source=${source.uuid}`} 
+                        readOnly 
+                      />
+                      <Button 
+                        icon={<CopyOutlined />} 
+                        onClick={() => copyToClipboard(`${liveLink}?source=${source.uuid}`)}
+                      >
+                        Copy
+                      </Button>
+                    </Input.Group>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <div className="mb-2">
+                      <Tag color="orange">Test Link</Tag>
+                    </div>
+                    <Input.Group compact>
+                      <Input 
+                        style={{ width: 'calc(100% - 70px)' }} 
+                        value={`${testLink}?source=${source.uuid}`} 
+                        readOnly 
+                      />
+                      <Button 
+                        icon={<CopyOutlined />} 
+                        onClick={() => copyToClipboard(`${testLink}?source=${source.uuid}`)}
+                      >
+                        Copy
+                      </Button>
+                    </Input.Group>
+                  </div>
+                </Card>
+              </div>
+            )
+          },
+          {
+            key: 'settings',
+            label: 'Settings',
+            children: (
+              <div className="p-4">
+                <Card title="Source Settings">
+                  <Form layout="vertical">
+                    <Form.Item label="Source Name" initialValue={source.name}>
+                      <Input />
+                    </Form.Item>
+                    
+                    <Form.Item label="Status" initialValue={source.status || 'active'}>
+                      <Select>
+                        <Option value="active">Active</Option>
+                        <Option value="paused">Paused</Option>
+                        <Option value="completed">Completed</Option>
+                      </Select>
+                    </Form.Item>
+                    
+                    <Form.Item label="Target Completes" initialValue={source.target || 100}>
+                      <InputNumber min={1} style={{ width: '100%' }} />
+                    </Form.Item>
+                    
+                    <Button type="primary">Save Changes</Button>
+                  </Form>
+                </Card>
+              </div>
+            )
+          }
+        ]} />
+      </div>
+    </div>
+  );
+};
+
+return (
+  <div className="bg-white min-h-screen">
+    {currentView === 'source' && selectedSource ? (
+      renderSourceDetail()
+    ) : (
+      <>
+        {/* Project header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="container mx-auto px-4 py-6">
+            {/* Back button */}
+            <Button 
+              icon={<ArrowLeftOutlined />} 
+              onClick={navigateToOverview}
+              className="mb-4"
+            >
+              Back to Projects
+            </Button>
+        </div>
+      </div>
+      
+      {/* Main content */}
+      <div className="flex-1 overflow-auto">
+        {/* ... (rest of the code remains the same) */}
+        {/* Project header with donut chart */}
+        <div className="bg-white p-6 border-b border-gray-200">
+          <div className="flex items-start">
+            <div className="flex-1">
+              <Typography.Title level={3} className="mb-1">{project.name}</Typography.Title>
+              <div className="flex items-center mb-4">
+                <Typography.Text type="secondary">Project ID: {project.uuid}</Typography.Text>
+                <Divider type="vertical" />
+                <Typography.Text type="secondary">Description: {project.description}</Typography.Text>
+              </div>
+            </div>
+            
+            {/* Donut chart */}
+            <div className="w-40 h-40 relative">
+              <StableChartContainer>
+                <DonutChart 
+                  data={{
+                    labels: ['Completed', 'Remaining'],
+                    datasets: [{
+                      data: [project.count_complete, project.total_available - project.count_complete],
+                      backgroundColor: ['#52c41a', '#f0f0f0'],
+                      borderWidth: 0
+                    }]
+                  }}
+                  cutout="70%"
+                  showLegend={false}
+                  showTooltip={false}
+                  maintainAspectRatio={false}
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold">
+                    {calcPercent(project.count_complete, project.total_available).toFixed(2)}%
+                  </div>
+                  <div className="text-xs text-gray-500">Completed</div>
+                </div>
+              </StableChartContainer>
+            </div>
+          </div>
+          
+          {/* KPI cards */}
+          <div className="grid grid-cols-6 gap-4 mt-4">
+            <Card className="text-center">
+              <Typography.Text type="secondary">Sample available</Typography.Text>
+              <div className="text-2xl font-bold mt-1">{project.total_available}</div>
+            </Card>
+            
+            <Card className="text-center">
+              <Typography.Text type="secondary">CPI</Typography.Text>
+              <div className="text-2xl font-bold mt-1">${(project.cpi_buyer/100).toFixed(2)}</div>
+            </Card>
+            
+            <Card className="text-center">
+              <Typography.Text type="secondary">Completed</Typography.Text>
+              <div className="text-2xl font-bold mt-1">{project.count_complete}</div>
+            </Card>
+            
+            <Card className="text-center">
+              <Typography.Text type="secondary">Over Quotas</Typography.Text>
+              <div className="text-2xl font-bold mt-1">{project.count_over_quota}</div>
+            </Card>
+            
+            <Card className="text-center">
+              <Typography.Text type="secondary">Terminated</Typography.Text>
+              <div className="text-2xl font-bold mt-1">{project.count_terminate}</div>
+            </Card>
+            
+            <Card className="text-center">
+              <Typography.Text type="secondary">Status</Typography.Text>
+              <div className="mt-1">
+                <Tag color="green">Active</Tag>
+              </div>
+            </Card>
+          </div>
+        </div>
+        
+        {/* Tabs */}
+        <div className="p-6">
+          <Tabs 
+            defaultActiveKey="overview" 
+            className="project-tabs"
+            items={[
+              {
+                key: 'overview',
+                label: 'Overview',
+                children: renderOverview()
+              },
+              {
+                key: 'sources',
+                label: 'Sources',
+                children: (
+                  <>
+                    <div className="flex justify-between mb-4">
+                      <Title level={4}>Project Sources</Title>
+                      <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />}
+                        onClick={handleAddSource}
+                      >
+                        Add Source
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sources.map(source => (
+                        <Card 
+                          key={source.uuid} 
+                          title={
+                            <div className="flex items-center">
+                              <span className="mr-2">{source.name}</span>
+                              <Tag color={source.status === 'active' ? 'green' : 'orange'}>
+                                {source.status === 'active' ? 'Active' : 'Paused'}
+                              </Tag>
+                            </div>
+                          }
+                          className="source-card"
+                        >
+                          <div className="mb-3">
+                            <Text type="secondary">Created: {source.created}</Text>
+                          </div>
+                          <div className="mb-3">
+                            <Text>Completes: {source.completes} / {source.target}</Text>
+                            <Progress percent={calcPercent(source.completes, source.target)} size="small" />
+                          </div>
+                          <div className="mb-3">
+                            <Text>Pace: {source.pace} completes/day</Text>
+                          </div>
+                          <div className="mb-3">
+                            <Text>Last Response: {source.lastResponse}</Text>
+                          </div>
+                          <div className="flex items-center">
+                            <Button icon={<BarChartOutlined />}>Details</Button>
+                            <Button 
+                              type="text" 
+                              icon={<EyeOutlined />} 
+                              className="ml-auto"
+                              onClick={() => window.open(`https://example.com/source/${source.uuid}`, '_blank')}
+                            >
+                              View Source
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )
+              },
+              {
+                key: 'survey-links',
+                label: 'Survey Links',
+                children: renderProjectSurveyLinks()
+              },
+              {
+                key: 'settings',
+                label: 'Settings',
+                children: (
+                  <Card title="Project Settings">
+                    <Form layout="vertical" initialValues={project}>
+                      <Row gutter={16}>
+                        <Col span={12}>
+                          <Form.Item label="Project Name" name="name">
+                            <Input />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item label="Project ID" name="uuid">
+                            <Input disabled />
+                          </Form.Item>
+                        </Col>
+                        <Col span={24}>
+                          <Form.Item label="Description" name="description">
+                            <Input.TextArea rows={3} />
+                          </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                          <Form.Item label="Status">
+                            <Select defaultValue="active">
+                              <Option value="active">Active</Option>
+                              <Option value="paused">Paused</Option>
+                              <Option value="completed">Completed</Option>
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                      </Row>
+                      <div className="flex justify-end">
+                        <Button type="primary">Save Changes</Button>
+                      </div>
+                    </Form>
+                  </Card>
+                )
+              },
+              {
+                key: 'respondents',
+                label: 'Respondents',
+                children: (
+                  <Card title="Respondent Data">
+                    <Alert 
+                      type="info" 
+                      message="Respondent data will be available once the survey has responses." 
+                      className="mb-4"
+                    />
+                    <Button icon={<DownloadOutlined />} disabled>Export Respondent Data</Button>
+                  </Card>
+                )
+              },
+              {
+                key: 'invoicing',
+                label: 'Invoicing',
+                children: (
+                  <Card title="Invoicing">
+                    <Alert 
+                      type="info" 
+                      message="Invoicing information will be available once the project is completed." 
+                      className="mb-4"
+                    />
+                    <Button icon={<FilePdfOutlined />} disabled>Generate Invoice</Button>
+                  </Card>
+                )
+              },
+              {
+                key: 'quality',
+                label: 'Quality / Reconciliation',
+                children: (
+                  <Card title="Quality Control">
+                    <Alert 
+                      type="info" 
+                      message="Quality control metrics will be available as responses are collected." 
+                      className="mb-4"
+                    />
+                    <Button icon={<BarChartOutlined />} disabled>View Quality Metrics</Button>
+                  </Card>
+                )
+              }
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* Modals */}
+      <Modal title={`Details – ${detailQuota?.name}`} open={modalVisible} onCancel={closeModal} footer={null} width={700}>
+        <div>
+          <p><strong>Description:</strong> {detailQuota?.description}</p>
+          <p><strong>Target:</strong> {detailQuota?.target}</p>
+          <p><strong>CPI:</strong> ${detailQuota?.cpi?.toFixed(2)}</p>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default ProjectDetailView;

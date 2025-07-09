@@ -1,0 +1,68 @@
+// @ts-nocheck
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Table,
+  Button,
+  Progress,
+  Tag,
+  Typography,
+  Select,
+  Input,
+  Tabs,
+  Card,
+  Collapse,
+  Modal,
+  Row,
+  Col,
+  Space,
+  Alert,
+  Divider,
+  Dropdown,
+  Menu,
+  theme,
+} from 'antd';
+import {
+  PlusOutlined,
+  CopyOutlined,
+  ArrowLeftOutlined,
+  BarChartOutlined,
+  PauseCircleOutlined,
+  TeamOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  FilePdfOutlined,
+  PrinterOutlined
+} from '@ant-design/icons';
+import { Doughnut, Line } from 'react-chartjs-2';
+import StableChartContainer from '../../components/projectDetail/StableChartContainer';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement
+} from 'chart.js';
+import DonutChart from '../../components/projectDetail/DonutChart';
+
+// Suppress Ant Design React version compatibility warning
+import { ConfigProvider } from 'antd';
+ConfigProvider.config({
+  theme: {
+    // Your theme configuration
+  },
+  warning: false, // Disable compatibility warnings
+});
+
+// Register Chart.js elements and scales
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+const { Title, Text } = Typography;
+const { TabPane } = Tabs;
+const { Option } = Select;
