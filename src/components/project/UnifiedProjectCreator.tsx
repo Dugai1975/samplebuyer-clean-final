@@ -29,6 +29,9 @@ interface UnifiedProjectCreatorProps {
   showNavigation?: boolean;
   onFeasibilityUpdate?: (data: FeasibilityData) => void;
   initialData?: Partial<ProjectCreationData>;
+  projectId?: string | null;
+  projectName?: string | null;
+  onAddToProject?: (criteria: any) => void;
 }
 
 // Local modal for project save/launch confirmation
@@ -234,12 +237,17 @@ const ProjectSaveModal: React.FC<{
   );
 };
 
+import { PlusOutlined } from "@ant-design/icons";
+
 export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   onCancel,
   onComplete,
   showNavigation = true,
   onFeasibilityUpdate,
-  initialData
+  initialData,
+  projectId,
+  projectName,
+  onAddToProject
 }) => {
   // State for Custom Audience Request Modal
   const [showCustomAudienceModal, setShowCustomAudienceModal] = useState(false);
@@ -418,6 +426,8 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
   }, [isMobile]);
 
   async function handleModalConfirm(name: string, description: string) {
+  console.log('[MobileLaunch] Entered handleModalConfirm', { name, description, pendingSave });
+
     setModalLoading(true);
     const saveData = { ...projectData, name, description };
     if (pendingSave === 'draft') {
@@ -428,15 +438,38 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
       setModalLoading(false);
       setSaveModalVisible(false);
       onCancel();
+      console.log('[MobileLaunch] Draft saved, modal closed, onCancel called.');
     } else if (pendingSave === 'launch') {
       const launched = JSON.parse(localStorage.getItem('projects') || '[]');
-      const newProject = { ...saveData, status: 'active', uuid: Date.now().toString() };
+      const newProject = { 
+        ...saveData, 
+        status: 'active', 
+        uuid: Date.now().toString(),
+        sources: [
+          {
+            type: 'audience',
+            demographics: saveData.demographics,
+            completes: saveData.completes,
+            incidence_rate: saveData.incidence_rate,
+            loi_minutes: saveData.loi_minutes,
+            country: saveData.country,
+            language: saveData.language,
+            quotas: saveData.quotas,
+            // add other relevant fields as needed
+          }
+        ]
+      };
       localStorage.setItem('projects', JSON.stringify([newProject, ...launched]));
       message.success('Project launched!');
       setModalLoading(false);
       setSaveModalVisible(false);
       setShowMobileLaunchConfirmation(false);
-      onComplete(newProject);
+      try {
+        onComplete(newProject);
+      } catch (err) {
+        console.error('[MobileLaunch] Error in onComplete:', err);
+        message.error('Navigation failed after project creation. Please return to dashboard.');
+      }
     }
   }
 
@@ -558,9 +591,19 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
       // Call the onComplete callback with the project data
       onComplete({
         ...projectData as ProjectCreationData,
+        sources: [
+          {
+            type: 'audience',
+            demographics: projectData.demographics,
+            completes: projectData.completes,
+            incidence_rate: projectData.incidence_rate,
+            loi_minutes: projectData.loi_minutes,
+            country: projectData.country,
+            language: projectData.language,
+            quotas: projectData.quotas,
+          }
+        ],
         // Add launch info to the project data
-        // TypeScript doesn't know about these properties as they're not in the interface
-        // but they'll be added to the object at runtime
         ...({
           launch_type: launchType,
           launch_config: launchConfig
@@ -1179,30 +1222,44 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
             >
               Save Draft
             </Button>
-            {isComplete ? (
-              <div className="relative inline-block">
-                <div className="absolute -top-3 -right-3 w-5 h-5 bg-green-500 rounded-full animate-pulse"></div>
-                <Tooltip title="Ready to launch!" placement="top">
-                  <Button 
-                    type="primary"
-                    size="large"
-                    icon={<RocketOutlined />}
-                    onClick={handleLaunch}
-                    className="bg-green-500 hover:bg-green-600 border-green-500 min-w-[160px]"
-                  >
-                    Create & Setup Project
-                  </Button>
-                </Tooltip>
-              </div>
-            ) : (
-              <Button 
+            {projectId && onAddToProject ? (
+              <Button
                 type="primary"
                 size="large"
-                disabled
-                className="min-w-[160px] opacity-50"
+                icon={<PlusOutlined />}
+                className="bg-blue-500 hover:bg-blue-600 border-blue-500 min-w-[180px]"
+                onClick={() => onAddToProject({
+                  ...projectData,
+                  name: generateSmartProjectName(),
+                  description: generateSmartDescription(),
+                  size: projectData.completes,
+                  feasibility: 'Medium', // or compute if available
+                })}
+                disabled={!isComplete}
               >
-                Create & Setup Project
+                Add to Project{projectName ? ` (${projectName})` : ''}
               </Button>
+            ) : (
+              isComplete ? (
+                <Button 
+                  type="primary"
+                  size="large"
+                  icon={<RocketOutlined />}
+                  onClick={handleLaunch}
+                  className="bg-green-500 hover:bg-green-600 border-green-500 min-w-[160px]"
+                >
+                  Create & Setup Project
+                </Button>
+              ) : (
+                <Button 
+                  type="primary"
+                  size="large"
+                  disabled
+                  className="min-w-[160px] opacity-50"
+                >
+                  Create & Setup Project
+                </Button>
+              )
             )}
           </div>
         </div>

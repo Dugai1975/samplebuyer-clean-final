@@ -6,42 +6,65 @@ import { useRouter } from 'next/navigation';
 import {
   Table,
   Button,
-  Progress,
   Tag,
   Typography,
   Select,
-  Input,
-  Tabs,
   Card,
-  Collapse,
-  Modal,
-  Row,
-  Col,
-  Space,
-  Alert,
   Divider,
   Dropdown,
   Menu,
   theme,
+  List,
+  Empty,
+  Spin,
+  Modal,
+  Input,
+  Tabs,
+  Statistic,
+  Progress,
+  Tooltip,
+  DatePicker,
+  Radio,
+  Space,
+  Badge,
+  message,
+  Row,
+  Col,
+  Alert,
+  Collapse,
 } from 'antd';
 import {
   PlusOutlined,
-  CopyOutlined,
-  ArrowLeftOutlined,
-  BarChartOutlined,
-  PauseCircleOutlined,
   TeamOutlined,
+  CopyOutlined,
   DownloadOutlined,
   EyeOutlined,
   FilePdfOutlined,
-  PrinterOutlined
+  PrinterOutlined,
+  SettingOutlined,
+  LineChartOutlined,
+  BarChartOutlined,
+  PieChartOutlined,
+  DownOutlined,
+  MenuOutlined,
+  CloseOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+  LinkOutlined,
+  LoadingOutlined,
+  RightOutlined,
+  LeftOutlined,
+  SearchOutlined,
+  ArrowLeftOutlined,
+  PauseCircleOutlined,
 } from '@ant-design/icons';
 import { Doughnut, Line } from 'react-chartjs-2';
 import StableChartContainer from '../../components/projectDetail/StableChartContainer';
 import {
   Chart as ChartJS,
   ArcElement,
-  Tooltip,
+  Tooltip as ChartTooltip,
   Legend,
   CategoryScale,
   LinearScale,
@@ -60,8 +83,8 @@ ConfigProvider.config({
 });
 
 // Register Chart.js elements and scales
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, ChartTooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
+ChartJS.register(ArcElement, ChartTooltip, Legend);
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -94,10 +117,7 @@ const mockProject = {
   }
 };
 
-const mockSuppliers = [
-  { uuid: 'sup-1', name: 'Test Mock Supplier', created: '06/30/2025, 08:47:38 AM', completes: 20, pace: 3 },
-  { uuid: 'sup-2', name: 'Cint', created: '06/30/2025, 10:52:41 AM', completes: 15, pace: 2 }
-];
+
 
 const mockQuotasData = [
   {
@@ -143,11 +163,530 @@ const mockReturnUrls = [
   { type: 'Timeout', url: mockProject.buyer.timeout_link, provider: mockProject.buyer.name }
 ];
 
+// Empty state components
+const EmptyProjectState = () => (
+  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+    <div className="bg-gray-100 rounded-full p-6 mb-4">
+      <BarChartOutlined style={{ fontSize: '48px', color: '#8c8c8c' }} />
+    </div>
+    <Typography.Title level={4}>No Project Data Available</Typography.Title>
+    <Typography.Paragraph className="text-gray-500 max-w-md mb-6">
+      This project hasn't been configured yet. Add project details and audiences from the feasibility tool to get started.
+    </Typography.Paragraph>
+    <Button type="primary" icon={<PlusOutlined />} onClick={() => window.location.href = '/create'}>
+      Create Project Details
+    </Button>
+  </div>
+);
+
+const EmptySourcesState = () => (
+  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+    <div className="bg-gray-100 rounded-full p-6 mb-4">
+      <TeamOutlined style={{ fontSize: '48px', color: '#8c8c8c' }} />
+    </div>
+    <Typography.Title level={4}>No Audience Sources Added</Typography.Title>
+    <Typography.Paragraph className="text-gray-500 max-w-md mb-6">
+      This project doesn't have any audience sources yet. Add sources to start collecting responses.
+    </Typography.Paragraph>
+    <Button type="primary" icon={<PlusOutlined />} onClick={() => window.dispatchEvent(new CustomEvent('openAddSourceModal'))}>
+      Add Audience Source
+    </Button>
+  </div>
+);
+
+const EmptySourceDetailState = () => (
+  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+    <div className="bg-gray-100 rounded-full p-6 mb-4">
+      <BarChartOutlined style={{ fontSize: '48px', color: '#8c8c8c' }} />
+    </div>
+    <Typography.Title level={4}>No Source Data Available</Typography.Title>
+    <Typography.Paragraph className="text-gray-500 max-w-md mb-6">
+      This source hasn't been launched yet. Once the source is active, you'll see performance metrics and response data here.
+    </Typography.Paragraph>
+    <div className="flex gap-3">
+      <Button type="primary" icon={<PlusOutlined />}>
+        Launch Source
+      </Button>
+      <Button icon={<EyeOutlined />}>
+        View Survey Links
+      </Button>
+    </div>
+  </div>
+);
+
+// --- Add Source Modal Component ---
+const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
+  const router = useRouter();
+  const [selectedTab, setSelectedTab] = useState('riwi');
+  const [selectedAudience, setSelectedAudience] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [riwiSubTab, setRiwiSubTab] = useState('saved');
+  
+  // Mock saved audiences data - these represent saved searches from the feasibility interface
+  const savedAudiences = [
+    { id: 'aud1', name: 'United States', description: 'English, Male, Age: 18-35', size: 45000000, feasibility: 'High', criteria: { country: 'US', language: 'English', gender: 'Male', age: '18-35' } },
+    { id: 'aud2', name: 'Germany', description: 'German, Income: 50K-80K', size: 12000000, feasibility: 'Medium', criteria: { country: 'DE', language: 'German', income: '50K-80K' } },
+    { id: 'aud3', name: 'Japan', description: 'Japanese, Age: 25-45, Gender: Female', size: 8500000, feasibility: 'High', criteria: { country: 'JP', language: 'Japanese', gender: 'Female', age: '25-45' } },
+    { id: 'aud4', name: 'Brazil', description: 'Portuguese, Income: 20K-50K, Education: College', size: 15000000, feasibility: 'Medium', criteria: { country: 'BR', language: 'Portuguese', income: '20K-50K', education: 'College' } },
+    { id: 'aud5', name: 'Canada', description: 'English, Gender: Male, Age: 18-30', size: 5000000, feasibility: 'High', criteria: { country: 'CA', language: 'English', gender: 'Male', age: '18-30' } },
+    { id: 'aud6', name: 'Australia', description: 'English, Gender: Female, Region: NSW', size: 3000000, feasibility: 'Medium', criteria: { country: 'AU', language: 'English', gender: 'Female', region: 'NSW' } },
+  ];
+
+  // Mock external sources
+  const externalSources = [
+    { id: 'ext1', name: 'Cint', description: 'Global panel provider with 150M+ respondents', regions: ['North America', 'Europe', 'Asia', 'Australia'], costPerInterview: '$3.50' },
+    { id: 'ext2', name: 'Purespectrum', description: 'Quality-focused sample provider', regions: ['North America', 'Europe'], costPerInterview: '$4.25' },
+    { id: 'ext3', name: 'Dynata', description: 'Large global panel with specialty audiences', regions: ['Global'], costPerInterview: '$5.00' },
+    { id: 'ext4', name: 'Lucid', description: 'Marketplace with multiple panel sources', regions: ['North America', 'Europe', 'Asia Pacific'], costPerInterview: '$3.75' },
+  ];
+
+  // Navigate to feasibility portal with project context
+  const goToFeasibilityPortal = () => {
+    let url = '/feasibility';
+    if (project && project.uuid && project.name) {
+      url += `?projectId=${project.uuid}&projectName=${encodeURIComponent(project.name)}`;
+    }
+    router.push(url);
+    onCancel(); // Close the modal
+  };
+
+  // Open audience in feasibility interface
+  const openInFeasibilityInterface = (audience, e) => {
+    e.stopPropagation();
+    if (!project || !project.uuid || !project.name) {
+      message.warning('Project context is required to open feasibility interface.');
+      return;
+    }
+    const url = `/feasibility?criteria=${encodeURIComponent(JSON.stringify(audience.criteria))}` +
+      `&projectId=${project.uuid}&projectName=${encodeURIComponent(project.name)}`;
+    // Debug logging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[FeasibilityNav] Navigating to:', url);
+      console.log('[FeasibilityNav] Project object:', project);
+      console.log('[FeasibilityNav] Audience:', audience);
+    }
+    try {
+      router.push(url);
+      setTimeout(() => onCancel(), 100); // Delay closing modal to allow navigation
+    } catch (err) {
+      // Fallback to hard redirect if router.push fails
+      window.location.href = url;
+    }
+  };
+
+
+  // Handle search for new audiences
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    setRiwiSubTab('search');
+    
+    // Simulate API search delay
+    setTimeout(() => {
+      // Mock search results based on query
+      const results = [];
+      
+      // Create audience variations based on search query
+      const regions = ['US', 'UK', 'Canada', 'Australia', 'Germany', 'France'];
+      const ageRanges = ['18-24', '25-34', '35-44', '45-54', '55+'];
+      
+      // Generate 2-3 results based on search query
+      const numResults = Math.floor(Math.random() * 2) + 2;
+      
+      for (let i = 0; i < numResults; i++) {
+        const region = regions[Math.floor(Math.random() * regions.length)];
+        const ageRange = ageRanges[Math.floor(Math.random() * ageRanges.length)];
+        
+        results.push({
+          id: `sr${i}`,
+          name: `${region} ${searchQuery}`,
+          description: `${searchQuery} in ${region}, Age: ${ageRange}`,
+          size: Math.floor(Math.random() * 10000000) + 500000,
+          feasibility: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
+          criteria: { country: region, query: searchQuery, age: ageRange }
+        });
+      }
+      
+      setSearchResults(results);
+      setIsSearching(false);
+    }, 1500);
+  };
+
+  // Handle adding the selected audience as a source
+  const handleAddSource = () => {
+    if (selectedAudience) {
+      onAddSource(selectedAudience);
+      onCancel();
+    }
+  };
+
+  // Render audience card
+  const renderAudienceCard = (item) => (
+    <div 
+      key={item.id}
+      className={`border rounded-md p-4 mb-4 cursor-pointer transition-all ${selectedAudience?.id === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+      onClick={() => setSelectedAudience(item)}
+    >
+      <div className="flex justify-between items-start mb-2">
+        <div className="font-medium text-lg">{item.name}</div>
+        <div>
+          <Tag color={item.feasibility === 'High' ? 'green' : item.feasibility === 'Medium' ? 'blue' : 'orange'}>
+            {item.feasibility} Feasibility
+          </Tag>
+        </div>
+      </div>
+      <div className="text-gray-600 mb-2">{item.description}</div>
+      {item.size && (
+        <div className="text-gray-500 text-sm">
+          Estimated size: {item.size.toLocaleString()} respondents
+        </div>
+      )}
+      <div className="flex mt-3 gap-2">
+        <Button 
+          size="small" 
+          icon={<EyeOutlined />} 
+          onClick={(e) => openInFeasibilityInterface(item, e)}
+        >
+          View in Feasibility
+        </Button>
+        <Button 
+          size="small" 
+          icon={<PlusOutlined />} 
+          type={selectedAudience?.id === item.id ? 'primary' : 'default'} 
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedAudience(item);
+          }}
+        >
+          Select
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Render external source card
+  const renderExternalSourceCard = (item) => (
+    <div 
+      key={item.id}
+      className={`border rounded-md p-4 mb-4 cursor-pointer transition-all ${selectedAudience?.id === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+      onClick={() => setSelectedAudience(item)}
+    >
+      <div className="flex justify-between items-start mb-2">
+        <div className="font-medium text-lg">{item.name}</div>
+        <div>
+          <Tag color="blue">External</Tag>
+        </div>
+      </div>
+      <div className="text-gray-600 mb-2">{item.description}</div>
+      <div className="text-gray-500 text-sm">
+        <div>Regions: {item.regions.join(', ')}</div>
+        <div>Average CPI: {item.costPerInterview}</div>
+      </div>
+      <div className="flex mt-3 gap-2">
+        <Button size="small" icon={<EyeOutlined />} onClick={(e) => { e.stopPropagation(); }}>
+          Details
+        </Button>
+        <Button size="small" icon={<PlusOutlined />} type={selectedAudience?.id === item.id ? 'primary' : 'default'} onClick={(e) => {
+          e.stopPropagation();
+          setSelectedAudience(item);
+        }}>
+          Select
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal
+      title="Select an Audience"
+      open={visible}
+      onCancel={onCancel}
+      footer={[
+        <Button key="cancel" onClick={onCancel}>Cancel</Button>,
+        <Button 
+          key="add" 
+          type="primary" 
+          disabled={!selectedAudience} 
+          onClick={handleAddSource}
+        >
+          {selectedTab === 'riwi' ? 'Add to Project' : 'Connect Source'}
+        </Button>
+      ]}
+      width={800}
+      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+    >
+      <Tabs
+        activeKey={selectedTab}
+        onChange={setSelectedTab}
+        items={[
+          {
+            key: 'riwi',
+            label: 'RIWI Audience',
+            children: (
+              <div>
+                <div className="flex gap-2 mb-4">
+                  <Input.Search
+                    placeholder="Search saved audiences"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onSearch={handleSearch}
+                    loading={isSearching}
+                    allowClear
+                    style={{ flex: 1, minWidth: 0 }}
+                  />
+                  <Button type="default" icon={<SearchOutlined />} onClick={goToFeasibilityPortal}>
+                    Feasibility Portal
+                  </Button>
+                </div>
+                <Radio.Group
+                  value={riwiSubTab}
+                  onChange={e => setRiwiSubTab(e.target.value)}
+                  buttonStyle="solid"
+                  className="mb-4"
+                >
+                  <Radio.Button value="saved">Saved</Radio.Button>
+                  <Radio.Button value="search">Results</Radio.Button>
+                </Radio.Group>
+                {riwiSubTab === 'saved' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {savedAudiences.map(item => (
+                      <div
+                        key={item.id}
+                        className={`border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer ${selectedAudience?.id === item.id ? 'ring-2 ring-blue-400' : ''}`}
+                        onClick={() => setSelectedAudience(item)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-base text-gray-900">{item.name}</span>
+                          <Tag color={item.feasibility === 'High' ? 'green' : item.feasibility === 'Medium' ? 'blue' : 'orange'}>
+                            {item.feasibility}
+                          </Tag>
+                        </div>
+                        <div className="text-gray-600 text-sm mb-2">{item.description}</div>
+                        <div className="text-gray-400 text-xs mb-3">{item.size.toLocaleString()} respondents</div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="small"
+                            icon={<EyeOutlined />}
+                            style={{ border: 'none', background: '#f5f5f5' }}
+                            onClick={e => openInFeasibilityInterface(item, e)}
+                          >
+                            Feasibility
+                          </Button>
+                          <Button
+                            size="small"
+                            icon={<PlusOutlined />}
+                            type={selectedAudience?.id === item.id ? 'primary' : 'default'}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setSelectedAudience(item);
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : isSearching ? (
+                  <div className="text-center py-8">
+                    <Spin tip="Searching..." />
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {searchResults.map(item => (
+                      <div
+                        key={item.id}
+                        className={`border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer ${selectedAudience?.id === item.id ? 'ring-2 ring-blue-400' : ''}`}
+                        onClick={() => setSelectedAudience(item)}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-base text-gray-900">{item.name}</span>
+                          <Tag color={item.feasibility === 'High' ? 'green' : item.feasibility === 'Medium' ? 'blue' : 'orange'}>
+                            {item.feasibility}
+                          </Tag>
+                        </div>
+                        <div className="text-gray-600 text-sm mb-2">{item.description}</div>
+                        <div className="text-gray-400 text-xs mb-3">{item.size.toLocaleString()} respondents</div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="small"
+                            icon={<EyeOutlined />}
+                            style={{ border: 'none', background: '#f5f5f5' }}
+                            onClick={e => openInFeasibilityInterface(item, e)}
+                          >
+                            Feasibility
+                          </Button>
+                          <Button
+                            size="small"
+                            icon={<PlusOutlined />}
+                            type={selectedAudience?.id === item.id ? 'primary' : 'default'}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setSelectedAudience(item);
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : searchQuery ? (
+                  <Empty description="No results" />
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <SearchOutlined style={{ fontSize: '32px', marginBottom: '16px' }} />
+                    <div>No saved audiences yet</div>
+                    <Button type="primary" className="mt-4" onClick={goToFeasibilityPortal}>
+                      Go to Feasibility Portal
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: 'external',
+            label: 'Other Sources',
+            children: (
+              <div>
+                <div className="mb-4">
+                  <Typography.Paragraph className="text-gray-600">
+                    Connect to external sample providers to supplement your RIWI audience or access specialty panels.
+                  </Typography.Paragraph>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {externalSources.map(renderExternalSourceCard)}
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
+    </Modal>
+  );
+};
+
 // --- MAIN COMPONENT ---
 export default function ViewProjectMock() {
   // Initialize all state at the top level to avoid hooks order issues
   const [currentTime, setCurrentTime] = React.useState(new Date());
+  const [project, setProject] = React.useState<any>(null);
+  const [sources, setSources] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const router = useRouter();
+
+  // On mount: check for newSourceCriteria in query params and add as new source if present
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const newSourceCriteria = params.get('newSourceCriteria');
+      if (newSourceCriteria && !window.__sourceAdded) {
+        try {
+          const criteria = JSON.parse(decodeURIComponent(newSourceCriteria));
+          // Use criteria as the new audience for handleAddSource
+          handleAddSource({
+            id: Math.random().toString(36).slice(2, 10),
+            name: criteria.name || 'Imported Audience',
+            description: criteria.description || '',
+            size: criteria.size || 0,
+            feasibility: criteria.feasibility || 'Medium',
+            criteria
+          });
+          window.__sourceAdded = true; // Prevent duplicate add
+          // Remove newSourceCriteria from URL after adding
+          params.delete('newSourceCriteria');
+          window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        } catch (e) {
+          // Ignore if parse fails
+        }
+      }
+    }
+  }, []);
+
   
+  // Buyer survey links renderer - defined at the top to avoid initialization errors
+  const renderBuyer = () => {
+    if (!project || !project.buyer) {
+      return <div className="text-gray-400">Loading buyer links...</div>;
+    }
+    return (
+      <div>
+        {mockQuotasData.map(q => {
+          const url = `${project.buyer.redirect_url}&q=${q.uuid}`;
+          return (
+            <div key={q.uuid} className="mb-2">
+              <label>Code: {q.code}</label>
+              <Input 
+                readOnly 
+                value={url} 
+                addonAfter={
+                  <Button 
+                    icon={<CopyOutlined />} 
+                    onClick={() => navigator.clipboard.writeText(url)} 
+                  />
+                } 
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // On mount: load project from localStorage using id from URL
+  React.useEffect(() => {
+    // --- DEMO PROJECT WITH MOCK SUPPLIERS (only if not present) ---
+    const demoId = 'mock-suppliers-demo';
+    const demoSources = [
+      { uuid: 'sup-1', name: 'Test Mock Supplier', created: '06/30/2025, 08:47:38 AM', completes: 20, pace: 3, status: 'active' },
+      { uuid: 'sup-2', name: 'Cint', created: '06/30/2025, 10:52:41 AM', completes: 15, pace: 2, status: 'paused' }
+    ];
+    let allProjects = JSON.parse(localStorage.getItem('projects') || '[]');
+    if (!allProjects.find((p: any) => p.uuid === demoId)) {
+      const demoProject = {
+        uuid: demoId,
+        name: 'Demo Project with Mock Suppliers',
+        description: 'This is a demo project to showcase the Project Detail UI with mock suppliers.',
+        created: '2025-07-09',
+        sources: demoSources,
+        status: 'active',
+        buyer: {
+          name: 'Demo Buyer',
+          complete_link: 'https://live.com/complete',
+          terminate_link: 'https://live.com/terminate',
+          quota_link: 'https://live.com/quota',
+          duplicate_link: 'https://live.com/duplicate',
+          quality_link: 'https://live.com/quality',
+          screenout_link: 'https://live.com/screenout',
+          timeout_link: 'https://live.com/timeout',
+          redirect_url: 'https://router.com/test?pid=mock-suppliers-demo'
+        }
+      };
+      allProjects = [demoProject, ...allProjects];
+      localStorage.setItem('projects', JSON.stringify(allProjects));
+    }
+
+    // --- NORMAL PROJECT LOADING ---
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id) {
+      allProjects = JSON.parse(localStorage.getItem('projects') || '[]');
+      const found = allProjects.find((p: any) => p.uuid === id);
+      if (found) {
+        setProject(found);
+        setSources(found.sources || []);
+      }
+    }
+    
+    // Set loading to false after data is loaded (or attempted to load)
+    setIsLoading(false);
+  }, []);
+
   // Helper function for copying text to clipboard
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -163,12 +702,21 @@ export default function ViewProjectMock() {
     return () => clearInterval(interval);
   }, []);
   const { token: { colorBgContainer } } = theme.useToken();
-  const router = useRouter();
 
   // Project state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentView, setCurrentView] = useState('overview');
   const [selectedSource, setSelectedSource] = useState(null);
+
+  
+  // Helper to check if selectedSource is valid
+  const isValidSelectedSource = !!selectedSource && sources.some(s => s.uuid === selectedSource);
+
+// Debug: Log selectedSource and sources on every render
+useEffect(() => {
+  console.log('[DEBUG] selectedSource:', selectedSource);
+  console.log('[DEBUG] sources:', sources.map(s => ({ uuid: s.uuid, name: s.name, status: s.status })));
+}, [selectedSource, sources]);
   const [isMobile, setIsMobile] = useState(false);
 
   // Survey links state (shared between project and source views)
@@ -177,29 +725,13 @@ export default function ViewProjectMock() {
   const [testResult, setTestResult] = useState(null);
   const [isTestingLink, setIsTestingLink] = useState(false);
 
-  const [project, setProject] = useState(() => {
-    // Calculate the sum of responses from each source
-    const totalCompletes = mockSuppliers.reduce((sum, source) => sum + (source.completes || 0), 0);
-    return {
-      ...mockProject,
-      count_complete: totalCompletes, // Update count_complete to reflect the sum from all sources
-    };
-  });
+
   const [filterSupplier, setFilterSupplier] = useState(null);
   const [detailQuota, setDetailQuota] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // Tab within content area
   const [addSourceModal, setAddSourceModal] = useState(false);
   // Use sources state for dynamic addition
-  const [sources, setSources] = useState(() => {
-    // Map suppliers to include status and ensure completes and pace are available
-    return mockSuppliers.map(supplier => ({
-      ...supplier,
-      status: 'active', // Default status
-      completes: supplier.completes || 0,
-      pace: supplier.pace || 0
-    }));
-  });
 
   // Function to calculate total completes from all sources and sessions
   const getTotalCompletes = useCallback(() => {
@@ -391,8 +923,9 @@ export default function ViewProjectMock() {
 
   // Source-specific quotas tab with audience table
   const renderSourceQuotas = () => {
-    const source = mockSuppliers.find(s => s.uuid === selectedSource);
-    if (!source) return null;
+    if (!isValidSelectedSource) return <EmptySourceDetailState />;
+    const source = sources.find(s => s.uuid === selectedSource);
+    if (!source) return <EmptySourceDetailState />;
 
     return (
       <div className="space-y-6">
@@ -457,8 +990,9 @@ export default function ViewProjectMock() {
 
   // Source-specific survey links
   const renderSourceLinks = () => {
-    const source = mockSuppliers.find(s => s.uuid === selectedSource);
-    if (!source) return null;
+    if (!isValidSelectedSource) return <EmptySourceDetailState />;
+    const source = sources.find(s => s.uuid === selectedSource);
+    if (!source) return <EmptySourceDetailState />;
     
     return (
     <>
@@ -503,6 +1037,7 @@ export default function ViewProjectMock() {
   };
 
   const navigateToSource = (sourceId) => {
+    console.log('[DEBUG] Navigating to source:', sourceId);
     setSelectedSource(sourceId);
     setCurrentView('source');
     if (isMobile) setSidebarOpen(false);
@@ -515,35 +1050,116 @@ export default function ViewProjectMock() {
 
   const closeModal = () => setModalVisible(false);
 
-  const handleAddSource = () => {
-    // Logic to add a new source
-    const newSource = {
-      uuid: `sup-${mockSuppliers.length + 1}`,
-      name: `New Source ${mockSuppliers.length + 1}`,
-      created: new Date().toLocaleString(),
-      status: 'active',
-      completes: 0,
-      pace: 0
-    };
-    mockSuppliers.push(newSource);
-    // Force re-render
-    setSelectedSource(newSource.uuid);
-    setCurrentView('source');
-    if (isMobile) setSidebarOpen(false);
+  // Handler for adding a new source from the modal
+  const handleAddSource = (audience) => {
+    // Prevent adding duplicate sources by audience id
+    setSources(prev => {
+      const exists = prev.some(s => s.audience && s.audience.id === audience.id);
+      if (exists) return prev;
+      const uuid = Math.random().toString(36).slice(2, 10) + Date.now();
+      const newSource = {
+        uuid,
+        name: audience.name,
+        created: new Date().toLocaleDateString(),
+        status: 'active',
+        completes: 0,
+        attempts: 0,
+        screenouts: 0,
+        terminates: 0,
+        quotafuls: 0,
+        pace: '0.0',
+        responses: 0,
+        audience: {
+          id: audience.id,
+          size: audience.size,
+          feasibility: audience.feasibility,
+          description: audience.description
+        }
+      };
+      // Persist to localStorage project
+      if (project && project.uuid) {
+        let allProjects = JSON.parse(localStorage.getItem('projects') || '[]');
+        const idx = allProjects.findIndex((p) => p.uuid === project.uuid);
+        if (idx !== -1) {
+          const updatedSources = [...(allProjects[idx].sources || []), newSource];
+          allProjects[idx].sources = updatedSources;
+          localStorage.setItem('projects', JSON.stringify(allProjects));
+          // Update local project state for immediate UI update
+          setProject({ ...allProjects[idx] });
+        }
+      }
+      const newSources = [...prev, newSource];
+      // Navigate to the new source after adding it
+      setTimeout(() => {
+        navigateToSource(uuid);
+      }, 0);
+      return newSources;
+    });
+    // Force update UI to ensure zero responses are displayed
+    setTimeout(() => {
+      const sourceElement = document.querySelector(`[aria-label="Source ${audience.name}"]`);
+      if (sourceElement) {
+        const responseElement = sourceElement.querySelector('[key="completes"]');
+        if (responseElement) {
+          responseElement.textContent = '✔️ 0';
+        }
+      }
+    }, 100);
   };
 
-  // Chart config (preserved)
-  const chartData = {
-    labels: ['Completed', 'Remaining'],
-    datasets: [{
-      data: [
-        project.count_complete + project.count_accept,
-        Math.max(project.total_available - (project.count_complete + project.count_accept), 0)
-      ],
-      backgroundColor: ['#4ADE80', '#E2E8F0'],
-      borderWidth: 0
-    }]
+  // Event listener for opening the modal from anywhere
+  useEffect(() => {
+    const handleOpenModal = () => setAddSourceModal(true);
+    window.addEventListener('openAddSourceModal', handleOpenModal);
+    // ... (rest of the code remains the same)
+    
+    return () => {
+      window.removeEventListener('openAddSourceModal', handleOpenModal);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Only reset if selectedSource is not null/undefined AND it's invalid
+    if (selectedSource && !isValidSelectedSource) {
+      console.warn('[DEBUG] Invalid selectedSource:', selectedSource, 'sources:', sources.map(s => s.uuid));
+      setSelectedSource(null);
+      setCurrentView('overview');
+    } else if (selectedSource) {
+      console.log('[DEBUG] Valid selectedSource:', selectedSource, 'currentView:', currentView);
+      // Ensure currentView is 'source' when selectedSource is valid
+      if (currentView !== 'source') {
+        console.log('[DEBUG] Correcting currentView to source');
+        setCurrentView('source');
+      }
+    }
+  }, [sources, selectedSource, isValidSelectedSource]);
+
+  // Chart config - moved inside a function to prevent null access
+  const getChartData = () => {
+    if (!project || typeof project.count_complete !== 'number' || typeof project.count_accept !== 'number' || typeof project.total_available !== 'number') {
+      return {
+        labels: ['Completed', 'Remaining'],
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: ['#4ADE80', '#E2E8F0'],
+          borderWidth: 0
+        }]
+      };
+    }
+    
+    return {
+      labels: ['Completed', 'Remaining'],
+      datasets: [{
+        data: [
+          project.count_complete + project.count_accept,
+          Math.max(project.total_available - (project.count_complete + project.count_accept), 0)
+        ],
+        backgroundColor: ['#4ADE80', '#E2E8F0'],
+        borderWidth: 0
+      }]
+    };
   };
+  
   const chartOptions = {
     cutout: '70%',
     maintainAspectRatio: false,
@@ -556,59 +1172,63 @@ export default function ViewProjectMock() {
   // --- Renderers for each tab ---
   const renderOverview = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-      {mockSuppliers.map(supplier => {
-        // Calculate total completes and target for this supplier
-        const totalCompletes = supplier.completes || 0;
-        const totalTarget = 100; // Example target
-        
-        return (
-          <Card key={supplier.uuid} className="relative">
-            <div className="mb-3">
-              <div className="flex justify-between items-center mb-1">
-                <div className="font-medium text-base">{supplier.name}</div>
-                <Tag color="blue">{supplier.uuid}</Tag>
-              </div>
-              <div className="text-xs text-gray-500">{supplier.name} - Added {supplier.created}</div>
-            </div>
-            
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm">Completes: <strong>{totalCompletes}</strong> of {totalTarget}</span>
-              <span className="text-sm text-gray-500">Pace: {supplier.pace}/hr</span>
-            </div>
-            <Progress 
-              percent={calcPercent(totalCompletes, totalTarget)} 
-              size="small" 
-              format={() => `${Math.round(calcPercent(totalCompletes, totalTarget))}%`}
-            />
-            
-            <div className="text-sm pt-2 flex justify-between">
-              <span>Status: <strong>{supplier.status || 'active'}</strong></span>
-              <span className="text-gray-500 text-xs">Last response: {new Date().toLocaleDateString()}</span>
-            </div>
-            
-            <div className="mt-3 flex justify-between">
-              <div className="flex gap-2">
-                <Button icon={<PauseCircleOutlined />} size="small">Pause</Button>
-                <Button
-                  icon={<BarChartOutlined />}
-                  size="small"
-                  onClick={() => setSelectedSource(supplier.uuid)}
-                >
-                  Details
-                </Button>
-              </div>
-              <Button 
-                icon={<EyeOutlined />} 
-                size="small" 
-                type="text"
-                onClick={() => setSelectedSource(supplier.uuid)}
-              >
-                View Source
-              </Button>
-            </div>
-          </Card>
-        );
-      })}
+      {sources.length === 0 ? (
+        <div className="col-span-2">
+          <EmptySourcesState />
+        </div>
+      ) : (
+        <>
+          {sources.map(supplier => {
+            // Calculate total completes and target for this supplier
+            const totalCompletes = supplier.completes || 0;
+            const totalTarget = 100; // Example target
+            return (
+              <Card key={supplier.uuid} className="relative">
+                <div className="mb-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="font-medium text-base">{supplier.name}</div>
+                    <Tag color="blue">{supplier.uuid}</Tag>
+                  </div>
+                  <div className="text-xs text-gray-500">{supplier.name} - Added {supplier.created}</div>
+                </div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm">Completes: <strong>{totalCompletes}</strong> of {totalTarget}</span>
+                  <span className="text-sm text-gray-500">Pace: {supplier.pace}/hr</span>
+                </div>
+                <Progress 
+                  percent={calcPercent(totalCompletes, totalTarget)} 
+                  size="small" 
+                  format={() => `${Math.round(calcPercent(totalCompletes, totalTarget))}%`}
+                />
+                <div className="text-sm pt-2 flex justify-between">
+                  <span>Status: <strong>{supplier.status || 'active'}</strong></span>
+                  <span className="text-gray-500 text-xs">Last response: {new Date().toLocaleDateString()}</span>
+                </div>
+                <div className="mt-3 flex justify-between">
+                  <div className="flex gap-2">
+                    <Button icon={<PauseCircleOutlined />} size="small">Pause</Button>
+                    <Button
+                      icon={<BarChartOutlined />}
+                      size="small"
+                      onClick={() => navigateToSource(supplier.uuid)}
+                    >
+                      Details
+                    </Button>
+                  </div>
+                  <Button 
+                    icon={<EyeOutlined />} 
+                    size="small" 
+                    type="text"
+                    onClick={() => navigateToSource(supplier.uuid)}
+                   >
+                     View Source
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 
@@ -616,103 +1236,83 @@ export default function ViewProjectMock() {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 items-center">
     {/* LEFT: Project Info */}
     <div>
-      <Title level={2} className="mb-1 flex items-center gap-2">
-        {project.name}
-        <Button icon={<CopyOutlined />} size="small" onClick={() => copyToClipboard(project.name)} />
-      </Title>
-      <div className="text-gray-500 mb-2">
-        <span className="font-medium">Project ID:</span> {project.uuid}
-      </div>
-      <div className="mb-2">Description: {project.description}</div>
-    </div>
+  <Title level={2} className="mb-1 flex items-center gap-2">
+  {project && project.name ? project.name : <span className="text-gray-400">Loading...</span>}
+  {project && project.name && (
+    <Button icon={<CopyOutlined />} size="small" onClick={() => copyToClipboard(project.name)} />
+  )}
+</Title>
+<div className="text-gray-500 mb-2">
+  <span className="font-medium">Project ID:</span> {project && project.uuid ? project.uuid : <span className="text-gray-400">Loading...</span>}
+</div>
+<div className="mb-2">Description: {project && project.description ? project.description : <span className="text-gray-400">Loading...</span>}</div>
+</div>
     {/* RIGHT: Chart and KPIs */}
     <div className="flex flex-col items-center gap-4">
       <div className="w-[180px] h-[180px] flex-none flex items-center justify-center">
-        <DonutChart
-          data={{
-            labels: ['Completed', 'Remaining'],
-            datasets: [
-              {
-                data: [
-                  Math.max(project.count_complete, 0),
-                  Math.max(project.total_available - project.count_complete, 0)
-                ],
-                backgroundColor: ['#22c55e', '#e5e7eb'],
-                borderWidth: 0,
-              },
-            ],
-          }}
-          size={180}
-        />
-      </div>
+  {project && typeof project.count_complete === 'number' && typeof project.total_available === 'number' ? (
+  <DonutChart
+    data={{
+      labels: ['Completed', 'Remaining'],
+      datasets: [
+        {
+          data: [
+            Math.max(project.count_complete, 0),
+            Math.max(project.total_available - project.count_complete, 0)
+          ],
+          backgroundColor: ['#22c55e', '#e5e7eb'],
+          borderWidth: 0,
+        },
+      ],
+    }}
+    size={180}
+  />
+) : (
+  <div className="flex items-center justify-center h-full w-full"><span className="text-gray-400">Loading chart...</span></div>
+)}
+</div>
       <div className="text-center -mt-10">
         <div className="text-lg font-bold text-green-600">
-          {project.total_available > 0
-            ? ((project.count_complete / project.total_available) * 100).toFixed(2)
-            : '0.00'} %
-        </div>
+  {project && typeof project.count_complete === 'number' && typeof project.total_available === 'number' && project.total_available > 0
+  ? ((project.count_complete / project.total_available) * 100).toFixed(2)
+  : '--'} %
+</div>
         <div className="text-xs text-gray-600">Completed</div>
       </div>
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 mt-4 w-full">
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Sample available</div>
-          <div className="text-2xl font-bold">{project.total_available}</div>
+          <div className="text-2xl font-bold">{project && typeof project.total_available === 'number' ? project.total_available : '--'}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">CPI</div>
-          <div className="text-2xl font-bold">${(project.cpi_buyer / 100).toFixed(2)}</div>
+          <div className="text-2xl font-bold">{project && typeof project.cpi_buyer === 'number' ? `$${(project.cpi_buyer / 100).toFixed(2)}` : '--'}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Completed</div>
-          <div className="text-2xl font-bold">{project.count_complete}</div>
+          <div className="text-2xl font-bold">{project && typeof project.count_complete === 'number' ? project.count_complete : '--'}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Over Quotas</div>
-          <div className="text-2xl font-bold">{project.count_over_quota}</div>
+          <div className="text-2xl font-bold">{project && typeof project.count_over_quota === 'number' ? project.count_over_quota : '--'}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Terminated</div>
-          <div className="text-2xl font-bold">{project.count_terminate}</div>
+          <div className="text-2xl font-bold">{project && typeof project.count_terminate === 'number' ? project.count_terminate : '--'}</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4 text-center">
           <div className="text-xs text-gray-500 mb-1">Status</div>
           <Tag color="green">Active</Tag>
         </div>
+        <div className="col-span-2">
+          <Text strong className="block mb-2">Survey Links:</Text>
+          {renderBuyer()}
+        </div>
       </div>
     </div>
   </div>
 
-  const renderBuyer = () => {
-    return (
-      <div>
-        {mockQuotasData.map(q => {
-          const url = `${project.buyer.redirect_url}&q=${q.uuid}`;
-          return (
-            <div key={q.uuid} className="mb-2">
-              <label className="block text-sm">Code: {q.code}</label>
-              <Input
-                readOnly
-                value={url}
-                addonAfter={
-                  <Button
-                    icon={<CopyOutlined />}
-                    onClick={() => navigator.clipboard.writeText(url)}
-                  />
-                }
-              />
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // Helper function for project instructions tab
-  const renderProjectInstructions = () => {
-    return renderAllSourcesInstructions();
-  };
-  
   const renderAllSourcesInstructions = () => (
     <div>
       <Alert
@@ -759,20 +1359,20 @@ export default function ViewProjectMock() {
           <Text strong className="block mb-2">Survey Links:</Text>
           <div className="space-y-2">
             {mockQuotasData.map(q => (
-              <div key={q.uuid} className="flex items-center gap-2">
-                <Text className="w-20 text-sm">{q.code}:</Text>
-                <Input
-                  size="small"
-                  readOnly
-                  value={`${q.live_link}&source=${s.uuid}`}
-                  className="flex-1"
-                />
-                <Button
-                  size="small"
-                  icon={<CopyOutlined />}
-                  onClick={() => copyToClipboard(`${q.live_link}&source=${s.uuid}`)}
-                />
-              </div>
+                <div key={q.uuid} className="flex items-center gap-2">
+                  <Text className="w-20 text-sm">{q.code}:</Text>
+                  <Input
+                    size="small"
+                    readOnly
+                    value={`${q.live_link}&source=${s.uuid}`}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={() => copyToClipboard(`${q.live_link}&source=${s.uuid}`)}
+                  />
+                </div>
             ))}
           </div>
         </div>
@@ -783,8 +1383,17 @@ export default function ViewProjectMock() {
   // ===== SOURCE-SPECIFIC TABS (when source selected) =====
   
   const renderSourceOverview = () => {
-    const source = mockSuppliers.find(s => s.uuid === selectedSource);
-    if (!source) return null;
+    if (!isValidSelectedSource) return <EmptySourceDetailState />;
+    const source = sources.find(s => s.uuid === selectedSource);
+    if (!source) return <EmptySourceDetailState />;
+    
+    // Check if source has any data (completes, pace, etc.)
+    const hasData = source.completes > 0 || source.pace > 0;
+    
+    // Show empty state if source has no data yet
+    if (!hasData) {
+      return <EmptySourceDetailState />;
+    }
 
     return (
       <div className="space-y-6">
@@ -899,8 +1508,8 @@ export default function ViewProjectMock() {
             { type: 'Complete', url: `https://client.com/complete` },
             { type: 'Terminate', url: `https://client.com/terminate` },
             { type: 'Quota Full', url: `https://client.com/quotafull` }
-          ].map(returnUrl => (
-            <div key={returnUrl.type} className="flex items-center gap-2">
+          ].map((returnUrl, index) => (
+            <div key={index} className="flex items-center gap-2">
               <Tag color="blue">{returnUrl.type}</Tag>
               <Input
                 readOnly
@@ -922,8 +1531,9 @@ export default function ViewProjectMock() {
   };
   
   const renderSourceReturnURLs = () => {
-    const source = mockSuppliers.find(s => s.uuid === selectedSource);
-    if (!source) return null;
+    if (!isValidSelectedSource) return <EmptySourceDetailState />;
+    const source = sources.find(s => s.uuid === selectedSource);
+    if (!source) return <EmptySourceDetailState />;
 
     // Source-specific return URLs
     const sourceReturnUrls = [
@@ -1064,8 +1674,9 @@ export default function ViewProjectMock() {
   };
   
   const renderSourceSampleProvider = () => {
-    const source = mockSuppliers.find(s => s.uuid === selectedSource);
-    if (!source) return null;
+    if (!isValidSelectedSource) return <EmptySourceDetailState />;
+    const source = sources.find(s => s.uuid === selectedSource);
+    if (!source) return <EmptySourceDetailState />;
     return (
       <Row gutter={16}>
         <Col span={12}>
@@ -1126,15 +1737,15 @@ export default function ViewProjectMock() {
       if (source.status === 'active') {
         return (
           <span className="flex items-center text-green-600 font-medium text-xs gap-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-            Active
+            <span key="indicator-dot" className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+            <span key="indicator-text">Active</span>
           </span>
         );
       } else {
         return (
           <span className="flex items-center text-yellow-600 font-medium text-xs gap-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
-            Paused
+            <span key="indicator-dot" className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
+            <span key="indicator-text">Paused</span>
           </span>
         );
       }
@@ -1162,8 +1773,8 @@ export default function ViewProjectMock() {
           {getStatusIndicator()}
         </div>
         <div className="flex gap-4 text-xs text-gray-600 font-medium mt-1.5">
-          <span>✔️ {source.completes ?? 0}</span>
-          <span>🚀 {source.pace ?? '—'}/hr</span>
+          <span key="completes">✔️ {source.completes !== undefined ? source.completes : 0}</span>
+          <span key="pace">🚀 {source.pace || '0.0'}/hr</span>
         </div>
       </div>
     );
@@ -1187,8 +1798,10 @@ export default function ViewProjectMock() {
       <div>
         <div className="px-6 pt-8 pb-6 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <div className="text-2xl font-bold mb-2 truncate text-gray-900">{project.name}</div>
-            <Tag color={project.state === 'active' ? 'green' : 'orange'} className="mb-1 px-3 py-1 rounded-full text-xs font-medium">{project.state.charAt(0).toUpperCase() + project.state.slice(1)}</Tag>
+            <div className="text-2xl font-bold mb-2 truncate text-gray-900">{project?.name || 'Untitled Project'}</div>
+            <Tag color={project?.state === 'active' ? 'green' : 'orange'} className="mb-1 px-3 py-1 rounded-full text-xs font-medium">
+              {project?.state ? project.state.charAt(0).toUpperCase() + project.state.slice(1) : 'Unknown'}
+            </Tag>
           </div>
           {isMobile && (
             <Button
@@ -1255,21 +1868,7 @@ export default function ViewProjectMock() {
       </div>
       {/* Bottom: Add Source Button */}
       <div className="px-6 pb-8 mt-4">
-        <Button type="dashed" icon={<PlusOutlined />} block style={{ minHeight: 48, borderRadius: '8px' }} className="hover:border-blue-500 hover:text-blue-500 transition-colors" onClick={() => {
-          // Add a new source with mock data
-          const uuid = Math.random().toString(36).slice(2, 10);
-          setSources(prev => [
-            ...prev,
-            {
-              uuid,
-              name: `Source ${prev.length + 1}`,
-              created: new Date().toLocaleDateString(),
-              status: prev.length % 2 === 0 ? 'active' : 'paused',
-              completes: Math.floor(Math.random() * 100),
-              pace: (Math.random() * 5).toFixed(1)
-            }
-          ]);
-        }}>
+        <Button type="dashed" icon={<PlusOutlined />} block style={{ minHeight: 48, borderRadius: '8px' }} className="hover:border-blue-500 hover:text-blue-500 transition-colors" onClick={() => setAddSourceModal(true)}>
           Add Source
         </Button>
       </div>
@@ -1277,6 +1876,28 @@ export default function ViewProjectMock() {
   );
 
   // MAIN COMPONENT RETURN
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <div className="text-lg font-medium text-gray-700">Loading project data...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show empty project state if no project data is available
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <EmptyProjectState />
+      </div>
+    );
+  }
+  
+  // Main component return with project data
   return (
     <div className={isMobile ? "bg-gray-50 min-h-screen" : "p-4 bg-gray-50 min-h-screen"}>
       {/* Mobile Header */}
@@ -1294,7 +1915,7 @@ export default function ViewProjectMock() {
             role="button"
             aria-pressed={sidebarOpen}
           />
-          <div className="text-lg font-bold truncate text-gray-900">{project.name}</div>
+          <div className="text-lg font-bold truncate text-gray-900">{project && project.name}</div>
           <div style={{ width: 40 }} /> {/* spacer */}
         </div>
       )}
@@ -1311,44 +1932,50 @@ export default function ViewProjectMock() {
           tabIndex={-1}
         />
       )}
+      {/* Add Source Modal */}
+      <AddSourceModal 
+        visible={addSourceModal} 
+        onCancel={() => setAddSourceModal(false)} 
+        onAddSource={handleAddSource}
+        project={project}
+      />
+      
       {renderSidebar()}
+      
       <div className={isMobile ? "mt-4" : "ml-[280px]"}>
         {/* Main content area */}
-        {!selectedSource ? (
+        {currentView !== 'source' ? (
           <div className="mb-4">
             {/* Project Status Panel (always at top) */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-6">
               <div>
                 <Title level={2} className="mb-1 flex items-center gap-2">
-                  {project.name}
-                  <Button icon={<CopyOutlined />} size="small" onClick={() => copyToClipboard(project.name)} />
-                </Title>
+  {project ? project.name : <span className="text-gray-400">Loading...</span>}
+  {project && (
+    <Button icon={<CopyOutlined />} size="small" onClick={() => copyToClipboard(project.name)} />
+  )}
+</Title>
                 <div className="text-gray-800 mb-2">
-                  <span className="font-medium text-gray-900">Project ID:</span> {project.uuid}
+                  <span className="font-medium text-gray-900">Project ID:</span> {project ? project.uuid : <span className="text-gray-400">Loading...</span>} 
                 </div>
-                <div className="mb-2 text-gray-900 font-medium">Description: <span className="text-gray-800">{project.description}</span></div>
+                <div className="mb-2 text-gray-900 font-medium">Description: <span className="text-gray-800">{project ? project.description : <span className="text-gray-400">Loading...</span>}</span></div>
               </div>
               <div className="flex flex-col items-center gap-4">
   <StableChartContainer size={120}>
-    <Doughnut
-      data={{
-        labels: ['Completed', 'Remaining'],
-        datasets: [
-          {
-            data: [project.count_complete, project.total_available - project.count_complete],
-            backgroundColor: ['#22c55e', '#e5e7eb'],
-            borderWidth: 0
-          }
-        ]
-      }}
-      options={{
-        cutout: '75%',
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false }
-        }
-      }}
-    />
+    {project && typeof project.count_complete === 'number' && typeof project.total_available === 'number' ? (
+  <Doughnut
+    data={getChartData()}
+    options={{
+      cutout: '75%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
+      }
+    }}
+  />
+) : (
+  <div className="flex items-center justify-center h-24"><span className="text-gray-400">Loading chart...</span></div>
+)}
     <div style={{
       position: 'absolute',
       top: '50%',
@@ -1358,8 +1985,8 @@ export default function ViewProjectMock() {
       width: '100%'
     }}>
       <div className="text-lg font-bold text-green-600">
-        {((project.count_complete / project.total_available) * 100).toFixed(2)} %
-      </div>
+  {project && typeof project.count_complete === 'number' && typeof project.total_available === 'number' && project.total_available > 0 ? ((project.count_complete / project.total_available) * 100).toFixed(2) : '--'} %
+</div>
       <div className="text-xs text-gray-600">Completed</div>
     </div>
   </StableChartContainer>
@@ -1367,23 +1994,23 @@ export default function ViewProjectMock() {
               <div className="grid grid-cols-2 gap-4 mt-4 md:mt-0">
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Sample available</div>
-                  <div className="text-2xl font-bold text-gray-900">{project.total_available}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project ? project.total_available : '--'}</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">CPI</div>
-                  <div className="text-2xl font-bold text-gray-900">${(project.cpi_buyer / 100).toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project ? `$${(project.cpi_buyer / 100).toFixed(2)}` : '--'}</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Completed</div>
-                  <div className="text-2xl font-bold text-gray-900">{project.count_complete}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project && typeof project.count_complete === 'number' ? project.count_complete : '--'}</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Over Quotas</div>
-                  <div className="text-2xl font-bold text-gray-900">{project.count_over_quota}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project ? project.count_over_quota : '--'}</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Terminated</div>
-                  <div className="text-2xl font-bold text-gray-900">{project.count_terminate}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project ? project.count_terminate : '--'}</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Status</div>
@@ -1402,7 +2029,7 @@ export default function ViewProjectMock() {
                     <div>
                       <div className="flex justify-between items-center mb-4">
                         <Title level={4}>Response Sources</Title>
-                        <Button type="primary" icon={<PlusOutlined />} size="small">
+                        <Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => setAddSourceModal(true)}>
                           Add Source
                         </Button>
                       </div>
@@ -1469,7 +2096,7 @@ export default function ViewProjectMock() {
               
               {/* Source header with progress */}
               {(() => {
-                const source = mockSuppliers.find(s => s.uuid === selectedSource);
+                const source = sources.find(s => s.uuid === selectedSource);
                 if (!source) return null;
                 
                 // Calculate source progress
