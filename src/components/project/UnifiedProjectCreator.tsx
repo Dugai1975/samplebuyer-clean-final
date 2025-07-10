@@ -1222,6 +1222,14 @@ export const UnifiedProjectCreator: React.FC<UnifiedProjectCreatorProps> = ({
             >
               Save Draft
             </Button>
+            {/* Debug info - rendered outside of JSX to avoid TypeScript errors */}
+            {(() => {
+              console.log('[DEBUG] UnifiedProjectCreator - projectId:', projectId);
+              console.log('[DEBUG] UnifiedProjectCreator - projectName:', projectName);
+              console.log('[DEBUG] UnifiedProjectCreator - onAddToProject exists:', !!onAddToProject);
+              return null;
+            })()}
+            
             {projectId && onAddToProject ? (
               <Button
                 type="primary"

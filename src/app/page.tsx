@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button, Typography, Card, Row, Col, Input, Tag } from 'antd';
+import { Button, Typography, Card, Row, Col, Input, Tag, message } from 'antd';
 import { PlusOutlined, ThunderboltOutlined, TableOutlined, AppstoreOutlined, RocketOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useEnhancedProjects } from '@/hooks/useEnhancedProjects';
@@ -45,7 +45,26 @@ export default function DashboardPage() {
   };
 
   const handleCreateProject = () => {
-    router.push('/wizard');
+    createEmptyProject();
+  };
+
+  const createEmptyProject = () => {
+    // Create a new empty project with no sources
+    const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+    const newProject = {
+      name: `New Project ${projects.length + 1}`,
+      description: 'Empty project ready for setup',
+      status: 'active',
+      uuid: Date.now().toString(),
+      created_at: new Date().toISOString(),
+      code: `P${Math.floor(1000 + Math.random() * 9000)}`,
+      state: 'draft',
+      sources: [] // Empty sources array
+    };
+    
+    localStorage.setItem('projects', JSON.stringify([newProject, ...projects]));
+    message.success('Empty project created!');
+    router.push(`/projectDetail?id=${newProject.uuid}`);
   };
 
   // Mobile hero section
@@ -259,7 +278,7 @@ export default function DashboardPage() {
                   <Button 
                     size="large"
                     className="min-h-[44px] px-6"
-                    onClick={() => router.push('/wizard')}
+                    onClick={createEmptyProject}
                   >
                     Manual Setup
                   </Button>

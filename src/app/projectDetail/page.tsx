@@ -58,6 +58,28 @@ import {
   SearchOutlined,
   ArrowLeftOutlined,
   PauseCircleOutlined,
+  RocketOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  MoreOutlined,
+  FileTextOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
+  UserOutlined,
+  UpOutlined,
+  QuestionCircleOutlined,
+  CalendarOutlined,
+  FilterOutlined,
+  ShareAltOutlined,
+  BellOutlined,
+  StarOutlined,
+  StarFilled,
+  DashboardOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  WarningOutlined,
+  AppstoreAddOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import { Doughnut, Line } from 'react-chartjs-2';
 import StableChartContainer from '../../components/projectDetail/StableChartContainer';
@@ -214,7 +236,7 @@ const EmptySourceDetailState = () => (
   </div>
 );
 
-// --- Add Source Modal Component ---
+// --- Modern Add Source Modal Component with Tabs ---
 const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState('riwi');
@@ -222,16 +244,22 @@ const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [riwiSubTab, setRiwiSubTab] = useState('saved');
+  const [isMobile, setIsMobile] = useState(false);
   
-  // Mock saved audiences data - these represent saved searches from the feasibility interface
+  // Check for mobile device
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Mock saved audiences data
   const savedAudiences = [
     { id: 'aud1', name: 'United States', description: 'English, Male, Age: 18-35', size: 45000000, feasibility: 'High', criteria: { country: 'US', language: 'English', gender: 'Male', age: '18-35' } },
     { id: 'aud2', name: 'Germany', description: 'German, Income: 50K-80K', size: 12000000, feasibility: 'Medium', criteria: { country: 'DE', language: 'German', income: '50K-80K' } },
     { id: 'aud3', name: 'Japan', description: 'Japanese, Age: 25-45, Gender: Female', size: 8500000, feasibility: 'High', criteria: { country: 'JP', language: 'Japanese', gender: 'Female', age: '25-45' } },
     { id: 'aud4', name: 'Brazil', description: 'Portuguese, Income: 20K-50K, Education: College', size: 15000000, feasibility: 'Medium', criteria: { country: 'BR', language: 'Portuguese', income: '20K-50K', education: 'College' } },
-    { id: 'aud5', name: 'Canada', description: 'English, Gender: Male, Age: 18-30', size: 5000000, feasibility: 'High', criteria: { country: 'CA', language: 'English', gender: 'Male', age: '18-30' } },
-    { id: 'aud6', name: 'Australia', description: 'English, Gender: Female, Region: NSW', size: 3000000, feasibility: 'Medium', criteria: { country: 'AU', language: 'English', gender: 'Female', region: 'NSW' } },
   ];
 
   // Mock external sources
@@ -245,74 +273,33 @@ const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
   // Navigate to feasibility portal with project context
   const goToFeasibilityPortal = () => {
     let url = '/feasibility';
-    if (project && project.uuid && project.name) {
-      url += `?projectId=${project.uuid}&projectName=${encodeURIComponent(project.name)}`;
+    if (project && project.uuid) {
+      // Make sure we're passing the projectId and projectName correctly
+      url += `?projectId=${project.uuid}&projectName=${encodeURIComponent(project.name || 'Project')}`;
+      console.log('[DEBUG] Navigating to feasibility with URL:', url);
+    } else {
+      console.log('[DEBUG] No project data available for navigation');
     }
     router.push(url);
     onCancel(); // Close the modal
   };
 
-  // Open audience in feasibility interface
-  const openInFeasibilityInterface = (audience, e) => {
-    e.stopPropagation();
-    if (!project || !project.uuid || !project.name) {
-      message.warning('Project context is required to open feasibility interface.');
-      return;
-    }
-    const url = `/feasibility?criteria=${encodeURIComponent(JSON.stringify(audience.criteria))}` +
-      `&projectId=${project.uuid}&projectName=${encodeURIComponent(project.name)}`;
-    // Debug logging
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[FeasibilityNav] Navigating to:', url);
-      console.log('[FeasibilityNav] Project object:', project);
-      console.log('[FeasibilityNav] Audience:', audience);
-    }
-    try {
-      router.push(url);
-      setTimeout(() => onCancel(), 100); // Delay closing modal to allow navigation
-    } catch (err) {
-      // Fallback to hard redirect if router.push fails
-      window.location.href = url;
-    }
-  };
-
-
   // Handle search for new audiences
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-    
     setIsSearching(true);
-    setRiwiSubTab('search');
     
     // Simulate API search delay
     setTimeout(() => {
-      // Mock search results based on query
-      const results = [];
-      
-      // Create audience variations based on search query
-      const regions = ['US', 'UK', 'Canada', 'Australia', 'Germany', 'France'];
-      const ageRanges = ['18-24', '25-34', '35-44', '45-54', '55+'];
-      
-      // Generate 2-3 results based on search query
-      const numResults = Math.floor(Math.random() * 2) + 2;
-      
-      for (let i = 0; i < numResults; i++) {
-        const region = regions[Math.floor(Math.random() * regions.length)];
-        const ageRange = ageRanges[Math.floor(Math.random() * ageRanges.length)];
-        
-        results.push({
-          id: `sr${i}`,
-          name: `${region} ${searchQuery}`,
-          description: `${searchQuery} in ${region}, Age: ${ageRange}`,
-          size: Math.floor(Math.random() * 10000000) + 500000,
-          feasibility: Math.random() > 0.6 ? 'High' : Math.random() > 0.3 ? 'Medium' : 'Low',
-          criteria: { country: region, query: searchQuery, age: ageRange }
-        });
-      }
+      // Filter saved audiences that match the search query
+      const results = savedAudiences.filter(audience => 
+        audience.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        audience.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
       
       setSearchResults(results);
       setIsSearching(false);
-    }, 1500);
+    }, 800);
   };
 
   // Handle adding the selected audience as a source
@@ -323,85 +310,125 @@ const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
     }
   };
 
+  // Get feasibility color
+  const getFeasibilityColor = (feasibility) => {
+    switch (feasibility) {
+      case 'High': return 'success';
+      case 'Medium': return 'processing';
+      case 'Low': return 'warning';
+      default: return 'default';
+    }
+  };
+
   // Render audience card
-  const renderAudienceCard = (item) => (
+  const renderAudienceCard = (audience) => (
     <div 
-      key={item.id}
-      className={`border rounded-md p-4 mb-4 cursor-pointer transition-all ${selectedAudience?.id === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
-      onClick={() => setSelectedAudience(item)}
+      key={audience.id}
+      className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedAudience?.id === audience.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+      onClick={() => setSelectedAudience(audience)}
     >
-      <div className="flex justify-between items-start mb-2">
-        <div className="font-medium text-lg">{item.name}</div>
-        <div>
-          <Tag color={item.feasibility === 'High' ? 'green' : item.feasibility === 'Medium' ? 'blue' : 'orange'}>
-            {item.feasibility} Feasibility
-          </Tag>
-        </div>
+      <div className="flex justify-between items-center mb-2">
+        <div className="font-medium text-base">{audience.name}</div>
+        <Tag color={getFeasibilityColor(audience.feasibility)}>
+          {audience.feasibility}
+        </Tag>
       </div>
-      <div className="text-gray-600 mb-2">{item.description}</div>
-      {item.size && (
-        <div className="text-gray-500 text-sm">
-          Estimated size: {item.size.toLocaleString()} respondents
-        </div>
-      )}
-      <div className="flex mt-3 gap-2">
+      <div className="text-gray-600 text-sm mb-2">{audience.description}</div>
+      <div className="text-gray-500 text-xs mb-3">
+        {audience.size.toLocaleString()} respondents
+      </div>
+      <div className="flex justify-between items-center mt-2">
         <Button 
           size="small" 
-          icon={<EyeOutlined />} 
-          onClick={(e) => openInFeasibilityInterface(item, e)}
+          icon={<EditOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            // Use the correct URL for the feasibility interface
+            let url = `/feasibility?criteria=${encodeURIComponent(JSON.stringify(audience.criteria))}`;
+            if (project && project.uuid) {
+              // Make sure projectId and projectName are correctly passed
+              url += `&projectId=${project.uuid}&projectName=${encodeURIComponent(project.name || 'Project')}`;
+              console.log('[DEBUG] Edit button - URL:', url);
+              console.log('[DEBUG] Edit button - Project:', project.uuid, project.name);
+            } else {
+              console.log('[DEBUG] Edit button - No project data available');
+            }
+            router.push(url);
+          }}
         >
-          View in Feasibility
+          Edit
         </Button>
         <Button 
           size="small" 
-          icon={<PlusOutlined />} 
-          type={selectedAudience?.id === item.id ? 'primary' : 'default'} 
+          type={selectedAudience?.id === audience.id ? 'primary' : 'default'}
+          icon={<PlusOutlined />}
           onClick={(e) => {
             e.stopPropagation();
-            setSelectedAudience(item);
+            setSelectedAudience(audience);
           }}
         >
-          Select
+          {selectedAudience?.id === audience.id ? 'Selected' : 'Select'}
         </Button>
       </div>
     </div>
   );
 
   // Render external source card
-  const renderExternalSourceCard = (item) => (
+  const renderExternalSourceCard = (source) => (
     <div 
-      key={item.id}
-      className={`border rounded-md p-4 mb-4 cursor-pointer transition-all ${selectedAudience?.id === item.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
-      onClick={() => setSelectedAudience(item)}
+      key={source.id}
+      className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedAudience?.id === source.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+      onClick={() => setSelectedAudience(source)}
     >
-      <div className="flex justify-between items-start mb-2">
-        <div className="font-medium text-lg">{item.name}</div>
-        <div>
-          <Tag color="blue">External</Tag>
-        </div>
+      <div className="flex justify-between items-center mb-2">
+        <div className="font-medium text-base">{source.name}</div>
+        <Tag color="blue">External</Tag>
       </div>
-      <div className="text-gray-600 mb-2">{item.description}</div>
-      <div className="text-gray-500 text-sm">
-        <div>Regions: {item.regions.join(', ')}</div>
-        <div>Average CPI: {item.costPerInterview}</div>
+      <div className="text-gray-600 text-sm mb-2">{source.description}</div>
+      <div className="text-gray-500 text-xs mb-3">
+        <div>Regions: {source.regions.join(', ')}</div>
+        <div>Average CPI: {source.costPerInterview}</div>
       </div>
-      <div className="flex mt-3 gap-2">
-        <Button size="small" icon={<EyeOutlined />} onClick={(e) => { e.stopPropagation(); }}>
+      <div className="flex justify-between items-center mt-2">
+        <Button 
+          size="small" 
+          icon={<InfoCircleOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            // Show details modal or info
+          }}
+        >
           Details
         </Button>
-        <Button size="small" icon={<PlusOutlined />} type={selectedAudience?.id === item.id ? 'primary' : 'default'} onClick={(e) => {
-          e.stopPropagation();
-          setSelectedAudience(item);
-        }}>
-          Select
+        <Button 
+          size="small" 
+          type={selectedAudience?.id === source.id ? 'primary' : 'default'}
+          icon={<PlusOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedAudience(source);
+          }}
+        >
+          {selectedAudience?.id === source.id ? 'Selected' : 'Select'}
         </Button>
       </div>
     </div>
   );
 
+  // Modal title with icon
+  const modalTitle = (
+    <div className="flex items-center">
+      <TeamOutlined className="mr-2 text-blue-500" />
+      <span>Select an Audience</span>
+    </div>
+  );
+
+  // Display audiences based on search or all
+  const displayAudiences = searchQuery.trim() ? searchResults : savedAudiences;
+
   return (
     <Modal
-      title="Select an Audience"
+      title={modalTitle}
       open={visible}
       onCancel={onCancel}
       footer={[
@@ -411,138 +438,78 @@ const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
           type="primary" 
           disabled={!selectedAudience} 
           onClick={handleAddSource}
+          icon={<PlusOutlined />}
         >
           {selectedTab === 'riwi' ? 'Add to Project' : 'Connect Source'}
         </Button>
       ]}
-      width={800}
-      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+      width={isMobile ? '95%' : 800}
+      centered
+      styles={{ 
+        body: { maxHeight: '70vh', overflowY: 'auto', padding: '16px' },
+        header: { borderBottom: '1px solid #f0f0f0' },
+        footer: { borderTop: '1px solid #f0f0f0' }
+      }}
     >
       <Tabs
         activeKey={selectedTab}
         onChange={setSelectedTab}
+        className="mb-4"
         items={[
           {
             key: 'riwi',
-            label: 'RIWI Audience',
+            label: (
+              <span className="flex items-center">
+                <TeamOutlined className="mr-1" />
+                RIWI Audience
+              </span>
+            ),
             children: (
               <div>
-                <div className="flex gap-2 mb-4">
-                  <Input.Search
-                    placeholder="Search saved audiences"
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    onSearch={handleSearch}
-                    loading={isSearching}
-                    allowClear
-                    style={{ flex: 1, minWidth: 0 }}
-                  />
-                  <Button type="default" icon={<SearchOutlined />} onClick={goToFeasibilityPortal}>
-                    Feasibility Portal
-                  </Button>
-                </div>
-                <Radio.Group
-                  value={riwiSubTab}
-                  onChange={e => setRiwiSubTab(e.target.value)}
-                  buttonStyle="solid"
-                  className="mb-4"
-                >
-                  <Radio.Button value="saved">Saved</Radio.Button>
-                  <Radio.Button value="search">Results</Radio.Button>
-                </Radio.Group>
-                {riwiSubTab === 'saved' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {savedAudiences.map(item => (
-                      <div
-                        key={item.id}
-                        className={`border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer ${selectedAudience?.id === item.id ? 'ring-2 ring-blue-400' : ''}`}
-                        onClick={() => setSelectedAudience(item)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-base text-gray-900">{item.name}</span>
-                          <Tag color={item.feasibility === 'High' ? 'green' : item.feasibility === 'Medium' ? 'blue' : 'orange'}>
-                            {item.feasibility}
-                          </Tag>
-                        </div>
-                        <div className="text-gray-600 text-sm mb-2">{item.description}</div>
-                        <div className="text-gray-400 text-xs mb-3">{item.size.toLocaleString()} respondents</div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="small"
-                            icon={<EyeOutlined />}
-                            style={{ border: 'none', background: '#f5f5f5' }}
-                            onClick={e => openInFeasibilityInterface(item, e)}
-                          >
-                            Feasibility
-                          </Button>
-                          <Button
-                            size="small"
-                            icon={<PlusOutlined />}
-                            type={selectedAudience?.id === item.id ? 'primary' : 'default'}
-                            onClick={e => {
-                              e.stopPropagation();
-                              setSelectedAudience(item);
-                            }}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-gray-700 font-medium">
+                    {isSearching ? 'Searching...' : 
+                      searchQuery.trim() ? 
+                        `${displayAudiences.length} result${displayAudiences.length !== 1 ? 's' : ''}` : 
+                        'Saved Audiences'}
                   </div>
-                ) : isSearching ? (
-                  <div className="text-center py-8">
-                    <Spin tip="Searching..." />
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {searchResults.map(item => (
-                      <div
-                        key={item.id}
-                        className={`border border-gray-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition cursor-pointer ${selectedAudience?.id === item.id ? 'ring-2 ring-blue-400' : ''}`}
-                        onClick={() => setSelectedAudience(item)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-semibold text-base text-gray-900">{item.name}</span>
-                          <Tag color={item.feasibility === 'High' ? 'green' : item.feasibility === 'Medium' ? 'blue' : 'orange'}>
-                            {item.feasibility}
-                          </Tag>
-                        </div>
-                        <div className="text-gray-600 text-sm mb-2">{item.description}</div>
-                        <div className="text-gray-400 text-xs mb-3">{item.size.toLocaleString()} respondents</div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="small"
-                            icon={<EyeOutlined />}
-                            style={{ border: 'none', background: '#f5f5f5' }}
-                            onClick={e => openInFeasibilityInterface(item, e)}
-                          >
-                            Feasibility
-                          </Button>
-                          <Button
-                            size="small"
-                            icon={<PlusOutlined />}
-                            type={selectedAudience?.id === item.id ? 'primary' : 'default'}
-                            onClick={e => {
-                              e.stopPropagation();
-                              setSelectedAudience(item);
-                            }}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : searchQuery ? (
-                  <Empty description="No results" />
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <SearchOutlined style={{ fontSize: '32px', marginBottom: '16px' }} />
-                    <div>No saved audiences yet</div>
-                    <Button type="primary" className="mt-4" onClick={goToFeasibilityPortal}>
-                      Go to Feasibility Portal
+                  <div className="flex gap-2">
+                    <Input.Search
+                      placeholder="Search audiences"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      onSearch={handleSearch}
+                      loading={isSearching}
+                      allowClear
+                      style={{ width: '220px' }}
+                    />
+                    <Button 
+                      type="primary" 
+                      icon={<AppstoreAddOutlined />} 
+                      onClick={goToFeasibilityPortal}
+                    >
+                      Feasibility Portal
                     </Button>
+                  </div>
+                </div>
+
+                {isSearching ? (
+                  <div className="text-center py-8">
+                    <Spin size="large" />
+                    <div className="mt-4 text-gray-500">Searching for audiences...</div>
+                  </div>
+                ) : displayAudiences.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {displayAudiences.map(renderAudienceCard)}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Empty description="No saved audiences found" />
+                    <div className="mt-4">
+                      <Button type="primary" onClick={goToFeasibilityPortal}>
+                        Create Audience
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -550,15 +517,22 @@ const AddSourceModal = ({ visible, onCancel, onAddSource, project }) => {
           },
           {
             key: 'external',
-            label: 'Other Sources',
+            label: (
+              <span className="flex items-center">
+                <GlobalOutlined className="mr-1" />
+                External Panels
+              </span>
+            ),
             children: (
               <div>
                 <div className="mb-4">
-                  <Typography.Paragraph className="text-gray-600">
-                    Connect to external sample providers to supplement your RIWI audience or access specialty panels.
-                  </Typography.Paragraph>
+                  <Alert
+                    message="External Panel Sources"
+                    description="Connect to third-party panel providers to access additional respondents and specialty audiences."
+                    type="info"
+                    showIcon
+                  />
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {externalSources.map(renderExternalSourceCard)}
                 </div>
@@ -585,9 +559,27 @@ export default function ViewProjectMock() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const newSourceCriteria = params.get('newSourceCriteria');
-      if (newSourceCriteria && !window.__sourceAdded) {
+      if (newSourceCriteria) {
         try {
-          const criteria = JSON.parse(decodeURIComponent(newSourceCriteria));
+          // First try to safely decode the URI component
+          let decodedCriteria;
+          try {
+            decodedCriteria = decodeURIComponent(newSourceCriteria);
+          } catch (decodeError) {
+            console.error('[ERROR] Failed to decode newSourceCriteria:', decodeError);
+            message.error('Failed to decode audience data from URL');
+            // Try a different approach - sometimes double encoding happens
+            try {
+              decodedCriteria = newSourceCriteria;
+            } catch (e) {
+              throw new Error('Cannot decode criteria parameter');
+            }
+          }
+          
+          // Now parse the JSON
+          const criteria = JSON.parse(decodedCriteria);
+          console.log('[DEBUG] Received newSourceCriteria:', criteria);
+          
           // Use criteria as the new audience for handleAddSource
           handleAddSource({
             id: Math.random().toString(36).slice(2, 10),
@@ -597,16 +589,20 @@ export default function ViewProjectMock() {
             feasibility: criteria.feasibility || 'Medium',
             criteria
           });
-          window.__sourceAdded = true; // Prevent duplicate add
+          
           // Remove newSourceCriteria from URL after adding
           params.delete('newSourceCriteria');
           window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+          
+          // Show success message
+          message.success('New audience source added successfully!');
         } catch (e) {
-          // Ignore if parse fails
+          console.error('[ERROR] Failed to parse newSourceCriteria:', e);
+          message.error('Failed to add new audience source');
         }
       }
     }
-  }, []);
+  }, [router.asPath]); // Re-run when URL changes
 
   
   // Buyer survey links renderer - defined at the top to avoid initialization errors
@@ -1052,59 +1048,92 @@ useEffect(() => {
 
   // Handler for adding a new source from the modal
   const handleAddSource = (audience) => {
-    // Prevent adding duplicate sources by audience id
+    console.log('[DEBUG] handleAddSource called with:', audience);
+    
+    const uuid = Math.random().toString(36).slice(2, 10) + Date.now();
+    const newSource = {
+      uuid,
+      name: audience.name || 'New Audience',
+      created: new Date().toLocaleDateString(),
+      status: 'active',
+      completes: 0,
+      attempts: 0,
+      screenouts: 0,
+      terminates: 0,
+      quotafuls: 0,
+      pace: '0.0',
+      responses: 0,
+      audience: {
+        id: audience.id || uuid,
+        size: audience.size || 100,
+        feasibility: audience.feasibility || 'Medium',
+        description: audience.description || ''
+      }
+    };
+    
+    console.log('[DEBUG] Created new source object:', newSource);
+    
+    // Update sources state with the new source
     setSources(prev => {
-      const exists = prev.some(s => s.audience && s.audience.id === audience.id);
-      if (exists) return prev;
-      const uuid = Math.random().toString(36).slice(2, 10) + Date.now();
-      const newSource = {
-        uuid,
-        name: audience.name,
-        created: new Date().toLocaleDateString(),
-        status: 'active',
-        completes: 0,
-        attempts: 0,
-        screenouts: 0,
-        terminates: 0,
-        quotafuls: 0,
-        pace: '0.0',
-        responses: 0,
-        audience: {
-          id: audience.id,
-          size: audience.size,
-          feasibility: audience.feasibility,
-          description: audience.description
-        }
-      };
-      // Persist to localStorage project
-      if (project && project.uuid) {
+      // Check if source already exists to avoid duplicates
+      const exists = prev.some(s => s.audience && s.audience.id === (audience.id || uuid));
+      if (exists) {
+        console.log('[DEBUG] Source already exists, not adding duplicate');
+        return prev;
+      }
+      console.log('[DEBUG] Adding new source to sources state');
+      return [...prev, newSource];
+    });
+    
+    // Persist to localStorage project
+    if (project && project.uuid) {
+      try {
         let allProjects = JSON.parse(localStorage.getItem('projects') || '[]');
         const idx = allProjects.findIndex((p) => p.uuid === project.uuid);
+        
         if (idx !== -1) {
-          const updatedSources = [...(allProjects[idx].sources || []), newSource];
-          allProjects[idx].sources = updatedSources;
-          localStorage.setItem('projects', JSON.stringify(allProjects));
-          // Update local project state for immediate UI update
-          setProject({ ...allProjects[idx] });
+          // Make sure sources array exists
+          if (!allProjects[idx].sources) {
+            allProjects[idx].sources = [];
+          }
+          
+          // Check for duplicates in localStorage
+          const existsInStorage = allProjects[idx].sources.some(
+            s => s.audience && s.audience.id === (audience.id || uuid)
+          );
+          
+          if (!existsInStorage) {
+            const updatedSources = [...allProjects[idx].sources, newSource];
+            allProjects[idx].sources = updatedSources;
+            localStorage.setItem('projects', JSON.stringify(allProjects));
+            
+            // Update local project state for immediate UI update
+            const updatedProject = { ...allProjects[idx] };
+            console.log('[DEBUG] Updating project with new source. Source count:', updatedProject.sources.length);
+            setProject(updatedProject);
+            
+            // Show success message
+            message.success(`Added audience "${newSource.name}" to project`);
+          } else {
+            console.log('[DEBUG] Source already exists in localStorage, not adding duplicate');
+          }
         }
+      } catch (error) {
+        console.error('[ERROR] Failed to update localStorage:', error);
+        message.error('Failed to save audience to project');
       }
-      const newSources = [...prev, newSource];
-      // Navigate to the new source after adding it
-      setTimeout(() => {
-        navigateToSource(uuid);
-      }, 0);
-      return newSources;
-    });
-    // Force update UI to ensure zero responses are displayed
-    setTimeout(() => {
-      const sourceElement = document.querySelector(`[aria-label="Source ${audience.name}"]`);
-      if (sourceElement) {
-        const responseElement = sourceElement.querySelector('[key="completes"]');
-        if (responseElement) {
-          responseElement.textContent = '✔️ 0';
-        }
-      }
-    }, 100);
+    } else {
+      console.error('[ERROR] No project found to add source to');
+      message.error('No project found to add audience to');
+    }
+    
+    // Close modal and update view
+    setAddSourceModal(false);
+    setCurrentView('overview');
+    
+    // Debug logging
+    console.log('[DEBUG] Added new source:', newSource);
+    console.log('[DEBUG] Current sources count:', sources.length + 1);
   };
 
   // Event listener for opening the modal from anywhere
@@ -1136,7 +1165,12 @@ useEffect(() => {
 
   // Chart config - moved inside a function to prevent null access
   const getChartData = () => {
-    if (!project || typeof project.count_complete !== 'number' || typeof project.count_accept !== 'number' || typeof project.total_available !== 'number') {
+    // For projects with no responses or pre-launch state
+    if (!project || 
+        typeof project.count_complete !== 'number' || 
+        typeof project.count_accept !== 'number' || 
+        typeof project.total_available !== 'number' ||
+        (project.count_complete === 0 && project.count_accept === 0)) {
       return {
         labels: ['Completed', 'Remaining'],
         datasets: [{
@@ -1146,7 +1180,7 @@ useEffect(() => {
         }]
       };
     }
-    
+  
     return {
       labels: ['Completed', 'Remaining'],
       datasets: [{
@@ -1961,36 +1995,38 @@ useEffect(() => {
                 <div className="mb-2 text-gray-900 font-medium">Description: <span className="text-gray-800">{project ? project.description : <span className="text-gray-400">Loading...</span>}</span></div>
               </div>
               <div className="flex flex-col items-center gap-4">
-  <StableChartContainer size={120}>
-    {project && typeof project.count_complete === 'number' && typeof project.total_available === 'number' ? (
-  <Doughnut
-    data={getChartData()}
-    options={{
-      cutout: '75%',
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false }
-      }
-    }}
-  />
-) : (
-  <div className="flex items-center justify-center h-24"><span className="text-gray-400">Loading chart...</span></div>
-)}
-    <div style={{
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      textAlign: 'center',
-      width: '100%'
-    }}>
-      <div className="text-lg font-bold text-green-600">
-  {project && typeof project.count_complete === 'number' && typeof project.total_available === 'number' && project.total_available > 0 ? ((project.count_complete / project.total_available) * 100).toFixed(2) : '--'} %
-</div>
-      <div className="text-xs text-gray-600">Completed</div>
-    </div>
-  </StableChartContainer>
-</div>
+                <StableChartContainer size={120}>
+                  {project ? (
+                    <Doughnut
+                      data={getChartData()}
+                      options={{
+                        cutout: '75%',
+                        plugins: {
+                          legend: { display: false },
+                          tooltip: { enabled: false }
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-24"><span className="text-gray-400">Loading chart...</span></div>
+                  )}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      width: '100%'
+                    }}>
+                      <div className="text-lg font-bold text-green-600">
+                        {project && typeof project.count_complete === 'number' && project.count_complete > 0 && typeof project.total_available === 'number' && project.total_available > 0 
+                          ? `${((project.count_complete / project.total_available) * 100).toFixed(2)}%` 
+                          : (project ? '0.00%' : '--')}
+                      </div>
+                      <div className="text-xs text-gray-600">Completed</div>
+                    </div>
+                </StableChartContainer>
+              </div>
               <div className="grid grid-cols-2 gap-4 mt-4 md:mt-0">
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Sample available</div>
@@ -1998,11 +2034,15 @@ useEffect(() => {
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">CPI</div>
-                  <div className="text-2xl font-bold text-gray-900">{project ? `$${(project.cpi_buyer / 100).toFixed(2)}` : '--'}</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {project && typeof project.cpi_buyer === 'number' && project.count_complete && project.count_complete > 0
+                      ? `$${(project.cpi_buyer / 100).toFixed(2)}` 
+                      : '--'}
+                  </div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Completed</div>
-                  <div className="text-2xl font-bold text-gray-900">{project && typeof project.count_complete === 'number' ? project.count_complete : '--'}</div>
+                  <div className="text-2xl font-bold text-gray-900">{project && typeof project.count_complete === 'number' ? (project.count_complete > 0 ? project.count_complete : '--') : '--'}</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 text-center">
                   <div className="text-sm font-medium text-gray-700 mb-1">Over Quotas</div>
