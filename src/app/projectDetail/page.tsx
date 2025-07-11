@@ -1162,11 +1162,12 @@ useEffect(() => {
     
     // Close modal and update view
     setAddSourceModal(false);
-    setCurrentView('overview');
-    
+    setActiveTab('sources'); // Navigate to sources tab instead of overview
+  
     // Debug logging
     console.log('[DEBUG] Added new source:', newSource);
     console.log('[DEBUG] Current sources count:', sources.length + 1);
+    console.log('[DEBUG] Navigating to sources tab');
   };
 
   // Event listener for opening the modal from anywhere
@@ -2629,8 +2630,36 @@ useEffect(() => {
           { label: 'Projects', href: '/projects' },
           { label: project?.name || 'Project Details' }
         ]}
-        onSave={() => message.success('Project saved successfully')}
+        onAddSource={() => setAddSourceModal(true)}
         onLaunch={() => setLaunchModalVisible(true)}
+        onToggleActiveSources={() => {
+          // Toggle the status of all sources between active and paused
+          const hasActive = sources.some(source => source.status === 'active');
+          const newStatus = hasActive ? 'paused' : 'active';
+          
+          // Update sources in state
+          const updatedSources = sources.map(source => ({
+            ...source,
+            status: newStatus
+          }));
+          setSources(updatedSources);
+          
+          // Update sources in localStorage
+          if (project && project.uuid) {
+            let allProjects = JSON.parse(localStorage.getItem('projects') || '[]');
+            const projectIndex = allProjects.findIndex(p => p.uuid === project.uuid);
+            if (projectIndex !== -1) {
+              allProjects[projectIndex].sources = updatedSources;
+              localStorage.setItem('projects', JSON.stringify(allProjects));
+            }
+          }
+          
+          // Show success message
+          message.success(`All sources ${hasActive ? 'paused' : 'resumed'} successfully`);
+        }}
+        hasActiveSources={sources.some(source => source.status === 'active')}
+        sourcesCount={sources.length}
+        launchDisabled={sources.length === 0}
       />
     </div>
   );

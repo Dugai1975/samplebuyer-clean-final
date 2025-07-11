@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Button } from 'antd';
-import { SaveOutlined, RocketOutlined } from '@ant-design/icons';
+import { Button, Tooltip, Badge } from 'antd';
+import { PlusOutlined, RocketOutlined, PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useMediaQuery } from 'react-responsive';
 import Link from 'next/link';
 
@@ -13,19 +13,23 @@ interface BreadcrumbItem {
 
 interface BottomStickyBarProps {
   breadcrumbs: BreadcrumbItem[];
-  onSave?: () => void;
+  onAddSource?: () => void;
   onLaunch?: () => void;
-  saveDisabled?: boolean;
+  onToggleActiveSources?: () => void;
+  hasActiveSources?: boolean;
+  sourcesCount?: number;
   launchDisabled?: boolean;
   className?: string;
 }
 
 const BottomStickyBar: React.FC<BottomStickyBarProps> = ({
   breadcrumbs,
-  onSave,
+  onAddSource,
   onLaunch,
-  saveDisabled = false,
-  launchDisabled = false,
+  onToggleActiveSources,
+  hasActiveSources = false,
+  sourcesCount = 0,
+  launchDisabled = true,
   className = '',
 }) => {
   const isMobile = useMediaQuery({ maxWidth: 768 });
@@ -50,29 +54,48 @@ const BottomStickyBar: React.FC<BottomStickyBarProps> = ({
       </div>
       
       <div className="sticky-bottom-bar-buttons">
-        {onSave && (
-          <Button 
-            icon={<SaveOutlined />} 
-            onClick={onSave}
-            disabled={saveDisabled}
-            size={isMobile ? "middle" : "large"}
-            className="mr-3"
-          >
-            Save
-          </Button>
+        {onAddSource && (
+          <Tooltip title="Add a new audience source to this project">
+            <Button 
+              icon={<PlusOutlined />} 
+              onClick={onAddSource}
+              size={isMobile ? "middle" : "large"}
+              className="mr-3"
+            >
+              Add Source
+            </Button>
+          </Tooltip>
+        )}
+        
+        {onToggleActiveSources && sourcesCount > 0 && (
+          <Tooltip title={hasActiveSources ? "Pause all active sources" : "Resume all paused sources"}>
+            <Button 
+              icon={hasActiveSources ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+              onClick={onToggleActiveSources}
+              size={isMobile ? "middle" : "large"}
+              className="mr-3"
+              danger={hasActiveSources}
+            >
+              {hasActiveSources ? "Pause All" : "Resume All"}
+            </Button>
+          </Tooltip>
         )}
         
         {onLaunch && (
-          <Button 
-            type="primary" 
-            icon={<RocketOutlined />}
-            onClick={onLaunch}
-            disabled={launchDisabled}
-            size={isMobile ? "middle" : "large"}
-            className={!launchDisabled ? "bg-blue-500 hover:bg-blue-600 border-blue-500" : ""}
-          >
-            Launch Project
-          </Button>
+          <Tooltip title={sourcesCount === 0 ? "Add at least one source to launch project" : "Launch this project"}>
+            <Badge count={sourcesCount} size="small" offset={[-5, 5]} showZero>
+              <Button 
+                type="primary" 
+                icon={<RocketOutlined />}
+                onClick={onLaunch}
+                disabled={launchDisabled}
+                size={isMobile ? "middle" : "large"}
+                className={!launchDisabled ? "bg-blue-500 hover:bg-blue-600 border-blue-500" : ""}
+              >
+                Launch Project
+              </Button>
+            </Badge>
+          </Tooltip>
         )}
       </div>
     </div>
