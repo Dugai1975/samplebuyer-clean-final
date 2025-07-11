@@ -1,0 +1,65 @@
+/* Source Detail Page Styles */
+.source-detail-container {
+  padding-bottom: 80px; /* Space for bottom sticky bar */
+}
+
+.source-tabs .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+/* Chart container styles */
+.chart-container {
+  position: relative;
+  height: 300px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .source-detail-container {
+    padding-bottom: 120px; /* More space for mobile bottom bar */
+  }
+  
+  .chart-container {
+    height: 250px;
+  }
+}
+
+/* Custom scrollbar for tables */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Timeline styles */
+.ant-timeline-item-content {
+  margin-left: 20px;
+}
+
+/* Card hover effects */
+.stat-card {
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Progress bar animations */
+.ant-progress-bg {
+  transition: all 0.8s ease-out;
+}

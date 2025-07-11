@@ -1945,6 +1945,13 @@ useEffect(() => {
 
   // State variables for tab navigation and launch modal are declared at the top level
 
+  // Handler for viewing source details
+  const handleViewSource = (source) => {
+    console.log('[DEBUG] View source details:', source);
+    // Navigate to source detail page with source ID and project ID
+    router.push(`/sourceDetail?id=${source.uuid}&projectId=${project.uuid}`);
+  };
+
   // Handle project launch
   const handleProjectLaunch = () => {
     message.success('Project launched successfully!');
