@@ -42,13 +42,13 @@ export default function FeasibilityPage() {
       const stringifiedCriteria = JSON.stringify(enhancedCriteria);
       console.log('[DEBUG] Stringified criteria length:', stringifiedCriteria.length);
       
-      // Then encode it for URL safety - use encodeURI instead of encodeURIComponent for less aggressive encoding
-      // This helps prevent double-encoding issues
-      const encodedCriteria = encodeURI(stringifiedCriteria);
+      // Use a simpler encoding approach that won't cause decoding issues
+      // Just use the raw JSON string without any encoding
+      // This works because JSON is already properly escaped
       
       // Send criteria back to project page as URL param
-      const url = `/projectDetail?id=${projectId}&newSourceCriteria=${encodedCriteria}`;
-      console.log('[DEBUG] Redirecting with URL (truncated):', url.substring(0, 100) + '...');
+      const url = `/projectDetail?id=${projectId}&newSourceCriteria=${stringifiedCriteria}`;
+      console.log('[DEBUG] Redirecting to project detail page with criteria');
       router.push(url);
     } catch (error) {
       console.error('[ERROR] Failed to encode criteria:', error);

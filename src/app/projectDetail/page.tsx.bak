@@ -84,11 +84,7 @@ import {
   WarningOutlined,
   AppstoreAddOutlined,
   GlobalOutlined,
-  SaveOutlined,
-  HomeOutlined,
 } from '@ant-design/icons';
-import './projectDetail.css';
-import BottomStickyBar from '@/components/navigation/BottomStickyBar';
 import { Doughnut, Line } from 'react-chartjs-2';
 import StableChartContainer from '../../components/projectDetail/StableChartContainer';
 import {
@@ -1942,7 +1938,12 @@ useEffect(() => {
     </aside>
   );
 
-  // State variables for tab navigation and launch modal are declared at the top level
+  // State for tab navigation
+  // activeTab is already declared at the top level
+  // launchModalVisible is already declared at the top level
+  // launchStep is already declared at the top level
+  // Adding launch type state for the launch modal workflow
+  const [selectedSource, setSelectedSource] = useState(null);
 
   // Handle project launch
   const handleProjectLaunch = () => {
@@ -2060,8 +2061,36 @@ useEffect(() => {
   
   // Main component return with project data
   return (
-    <div className="bg-gray-50 min-h-screen project-detail-container">
-      {/* Page content starts directly without top bar */}
+    <div className="bg-gray-50 min-h-screen">
+      {/* Top Navigation Bar */}
+      <div className="sticky top-0 z-40 w-full bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 mx-auto">
+          {/* Left: Logo and breadcrumbs */}
+          <div className="flex items-center space-x-4">
+            <a href="/" className="flex items-center">
+              <span className="font-bold text-blue-600">SampleBuyer</span>
+            </a>
+            <div className="hidden md:flex items-center">
+              <span className="text-gray-400 mx-2">/</span>
+              <a href="/projects" className="text-gray-600 hover:text-gray-900">Projects</a>
+              <span className="text-gray-400 mx-2">/</span>
+              <span className="font-medium text-gray-900 truncate max-w-[200px]">{project?.name}</span>
+            </div>
+          </div>
+          
+          {/* Right: User actions */}
+          <div className="flex items-center space-x-4">
+            <Button type="default" icon={<SaveOutlined />}>Save</Button>
+            <Button 
+              type="primary" 
+              icon={<RocketOutlined />}
+              onClick={() => setLaunchModalVisible(true)}
+            >
+              Launch Project
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Project Header with Tabs */}
       <div className="bg-white border-b border-gray-200">
@@ -2614,24 +2643,6 @@ useEffect(() => {
           </Steps>
         </div>
       </Modal>
-      {/* Add Source Modal */}
-      <AddSourceModal
-        visible={addSourceModal}
-        onCancel={() => setAddSourceModal(false)}
-        onAddSource={handleAddSource}
-        project={project}
-      />
-      
-      {/* Bottom Sticky Bar with Breadcrumb Navigation */}
-      <BottomStickyBar 
-        breadcrumbs={[
-          { label: 'SampleBuyer', href: '/' },
-          { label: 'Projects', href: '/projects' },
-          { label: project?.name || 'Project Details' }
-        ]}
-        onSave={() => message.success('Project saved successfully')}
-        onLaunch={() => setLaunchModalVisible(true)}
-      />
     </div>
   );
 }

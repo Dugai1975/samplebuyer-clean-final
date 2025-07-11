@@ -1,0 +1,74 @@
+/* Bottom sticky bar styles */
+.sticky-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  padding: 1rem;
+  border-top: 1px solid #f0f0f0;
+  z-index: 1001;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Add padding to the bottom of the page to account for the fixed bar */
+.project-detail-container {
+  padding-bottom: 80px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .sticky-bottom-bar {
+    flex-direction: column;
+    padding: 0.75rem;
+  }
+  
+  .sticky-bottom-bar-buttons {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+  }
+
+  .breadcrumb-container {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Breadcrumb styles */
+.breadcrumb-container {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.breadcrumb-separator {
+  margin: 0 8px;
+  color: #ccc;
+}
+
+.breadcrumb-link {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-current {
+  color: #333;
+  font-weight: 500;
+}
