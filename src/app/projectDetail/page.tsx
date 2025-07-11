@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import SourcesOverview from '../../components/projectDetail/SourcesOverview';
 import {
   Table,
   Button,
@@ -36,6 +37,7 @@ import {
   InputNumber,
   Steps,
   Checkbox,
+  Form,
 } from 'antd';
 import {
   PlusOutlined,
@@ -725,8 +727,22 @@ export default function ViewProjectMock() {
       console.error('Failed to copy:', err);
     });
   };
-  
-  // Set up timer for updating current time
+
+  // Toggle source status (active/paused)
+  const handleToggleSourceStatus = (source) => {
+    const updatedSources = sources.map(s => {
+      if (s.uuid === source.uuid) {
+        const newStatus = s.status === 'active' ? 'paused' : 'active';
+        message.success(`Source ${s.name} ${newStatus === 'active' ? 'activated' : 'paused'}`);
+        return { ...s, status: newStatus };
+      }
+      return s;
+    });
+    
+    setSources(updatedSources);
+    localStorage.setItem('sources', JSON.stringify(updatedSources));
+  };
+
   React.useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(interval);
@@ -2221,6 +2237,15 @@ useEffect(() => {
                     </div>
                   </div>
                 </div>
+              </Card>
+              
+              {/* Sources Overview */}
+              <Card title="Project Sources Overview" className="mb-6">
+                <SourcesOverview 
+                  sources={sources} 
+                  projectId={project?.uuid || ''} 
+                  handleToggleSourceStatus={handleToggleSourceStatus}
+                />
               </Card>
             </div>
             
